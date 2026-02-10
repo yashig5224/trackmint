@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import AIAssistant from "@/components/ai/AIAssistant";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar,
@@ -64,7 +65,7 @@ const navItems = [
   { icon: "◔", label: "Budgets", id: "budgets" },
   { icon: "◎", label: "Goals", id: "goals" },
   { icon: "◈", label: "Reports", id: "reports" },
-  { icon: "◇", label: "AI Chat", id: "chat" },
+  { icon: "◇", label: "AI Coach", id: "chat" },
 ];
 
 const aiSuggestions = [
@@ -75,20 +76,6 @@ const aiSuggestions = [
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
-  const [chatInput, setChatInput] = useState("");
-  const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "ai"; text: string }>>([
-    { role: "ai", text: "Hi! I'm your FinTrack AI assistant. Ask me anything about your finances." },
-  ]);
-
-  const handleChatSend = () => {
-    if (!chatInput.trim()) return;
-    setChatMessages((prev) => [
-      ...prev,
-      { role: "user" as const, text: chatInput },
-      { role: "ai" as const, text: "Based on your spending patterns, I'd suggest reducing dining out by 20%. This could save you ₹1,600/month. Would you like me to create a budget for that?" },
-    ]);
-    setChatInput("");
-  };
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -380,44 +367,9 @@ const Dashboard = () => {
             </motion.div>
           )}
 
-          {/* AI Chat tab */}
+          {/* AI Coach tab */}
           {activeTab === "chat" && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-2xl">
-              <h1 className="font-display text-2xl font-bold mb-6">AI Assistant</h1>
-              <div className="rounded-xl border border-border flex flex-col" style={{ height: "calc(100vh - 200px)" }}>
-                <div className="flex-1 overflow-y-auto p-5 space-y-4">
-                  {chatMessages.map((msg, i) => (
-                    <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
-                        msg.role === "user"
-                          ? "bg-foreground text-background rounded-br-md"
-                          : "bg-secondary rounded-bl-md"
-                      }`}>
-                        {msg.text}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="p-4 border-t border-border">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleChatSend()}
-                      placeholder="Ask about your finances..."
-                      className="flex-1 px-4 py-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-foreground/10"
-                    />
-                    <button
-                      onClick={handleChatSend}
-                      className="bg-foreground text-background px-5 py-3 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity"
-                    >
-                      Send
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
+            <AIAssistant />
           )}
         </div>
       </main>
