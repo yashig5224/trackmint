@@ -5,7 +5,6 @@ import {
 } from "recharts";
 import type { Persona } from "./PersonaSelection";
 
-// ─── Types ───
 interface Message {
   id: number;
   role: "user" | "ai";
@@ -21,7 +20,6 @@ interface Insight {
   chartData?: { name: string; value: number }[];
 }
 
-// ─── AI Responses ───
 const aiResponses: Record<string, { text: string; insights: Insight[] }> = {
   "Analyze Spending": {
     text: "📊 I've scanned your spending for the past 30 days. Your dining expenses are above budget, but transport costs dropped nicely!",
@@ -42,7 +40,7 @@ const aiResponses: Record<string, { text: string; insights: Insight[] }> = {
     ],
   },
   "Save More": {
-    text: "💡 Found 5 ways to save more this month. Some quick wins:",
+    text: "💡 Found 5 ways to save more this month:",
     insights: [
       { label: "Cancel Unused Sub", value: "Save ₹499/mo", change: "Spotify unused 3 weeks", positive: true },
       { label: "Meal Prep", value: "Save ₹2,400/mo", change: "Reduce dining 50%", positive: true },
@@ -51,7 +49,7 @@ const aiResponses: Record<string, { text: string; insights: Insight[] }> = {
     ],
   },
   "Monthly Report": {
-    text: "📈 Complete financial report: income is up and expenses are down. Keep it going!",
+    text: "📈 Complete financial report: income is up and expenses are down!",
     insights: [
       { label: "Net Income", value: "+₹27,060", change: "+23% vs Feb", positive: true },
       { label: "Top Category", value: "Food ₹8,240", change: "29.5% of spending", chartData: [{ name: "Food", value: 8240 }, { name: "Transport", value: 4500 }, { name: "Shopping", value: 6200 }, { name: "Bills", value: 5800 }, { name: "Fun", value: 3200 }] },
@@ -60,7 +58,7 @@ const aiResponses: Record<string, { text: string; insights: Insight[] }> = {
     ],
   },
   "Goals Plan": {
-    text: "🎯 3 active savings goals. Emergency Fund is looking great — you'll hit it by August!",
+    text: "🎯 3 active savings goals. Emergency Fund is looking great!",
     insights: [
       { label: "Emergency Fund", value: "68%", change: "₹1,36,000 / ₹2,00,000", positive: true, chartData: [{ name: "Saved", value: 68 }, { name: "Left", value: 32 }] },
       { label: "Vacation Fund", value: "56%", change: "₹45,000 / ₹80,000" },
@@ -71,11 +69,11 @@ const aiResponses: Record<string, { text: string; insights: Insight[] }> = {
 };
 
 const quickActions = [
-  { label: "Analyze Spending", icon: "⚡", color: "hsl(38,92%,50%)" },
-  { label: "Create Budget", icon: "🛡️", color: "hsl(217,91%,60%)" },
-  { label: "Save More", icon: "💎", color: "hsl(152,69%,41%)" },
-  { label: "Monthly Report", icon: "📊", color: "hsl(262,83%,58%)" },
-  { label: "Goals Plan", icon: "🎯", color: "hsl(330,81%,60%)" },
+  { label: "Analyze Spending", icon: "⚡" },
+  { label: "Create Budget", icon: "🛡️" },
+  { label: "Save More", icon: "💎" },
+  { label: "Monthly Report", icon: "📊" },
+  { label: "Goals Plan", icon: "🎯" },
 ];
 
 const CHART_COLORS = [
@@ -86,22 +84,17 @@ const CHART_COLORS = [
   "hsl(152, 69%, 41%)",
 ];
 
-// ─── Counter Animation ───
 const AnimatedValue = ({ value }: { value: string }) => {
   const numMatch = value.match(/(₹?)([\d,]+\.?\d*)(.*)/);
   const [displayed, setDisplayed] = useState(value);
 
   useEffect(() => {
-    if (!numMatch) {
-      setDisplayed(value);
-      return;
-    }
+    if (!numMatch) { setDisplayed(value); return; }
     const prefix = numMatch[1];
     const targetNum = parseFloat(numMatch[2].replace(/,/g, ""));
     const suffix = numMatch[3];
-    const duration = 800;
+    const duration = 700;
     const startTime = performance.now();
-
     const animate = (now: number) => {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
@@ -116,25 +109,22 @@ const AnimatedValue = ({ value }: { value: string }) => {
   return <span>{displayed}</span>;
 };
 
-// ─── Main Component ───
 interface MissionDashboardProps {
   persona: Persona;
   onBack: () => void;
 }
 
 const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
+  const accentColor = `hsl(${persona.accentHsl})`;
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 0,
       role: "ai",
-      text: `Welcome, ${persona.name}! 🎮 I'm your AI Finance Coach. I've loaded your "${persona.tagline}" playstyle. Choose a power-up below to start your mission!`,
+      text: `Welcome! 👋 I'm your AI Finance Coach, tailored for the "${persona.name}" style. Choose an action below to get started!`,
     },
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [streak] = useState(7);
-  const [score] = useState(740);
-  const [level] = useState(12);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const nextId = useRef(1);
 
@@ -150,10 +140,9 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
     setIsTyping(true);
 
     const response = aiResponses[text] || {
-      text: `Analyzing "${text}" with your ${persona.name} profile... Here's what I found:`,
+      text: `Analyzing "${text}" for your ${persona.name} profile...`,
       insights: [
         { label: "Quick Insight", value: "Processing", change: "Based on your data", positive: true },
-        { label: "Recommendation", value: "Personalized", change: `Tailored for ${persona.name}`, positive: true },
       ],
     };
 
@@ -166,7 +155,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
         insights: response.insights,
       };
       setMessages((prev) => [...prev, aiMsg]);
-    }, 1200 + Math.random() * 800);
+    }, 1000 + Math.random() * 600);
   };
 
   const handleSend = () => {
@@ -179,183 +168,118 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="flex flex-col h-screen w-screen relative overflow-hidden"
+      transition={{ duration: 0.4 }}
+      className="flex flex-col h-screen w-screen relative overflow-hidden bg-[hsl(0,0%,98%)]"
     >
-      {/* Dark game background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[hsl(250,50%,8%)] via-[hsl(260,40%,10%)] to-[hsl(220,50%,6%)]" />
+      {/* Light background blobs */}
+      <div className="absolute top-0 right-0 w-[400px] h-[400px] rounded-full bg-[hsl(262,83%,58%/0.04)] blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[300px] h-[300px] rounded-full bg-[hsl(217,91%,60%/0.04)] blur-[80px] pointer-events-none" />
 
-      {/* Subtle grid */}
-      <div
-        className="absolute inset-0 opacity-[0.04]"
-        style={{
-          backgroundImage:
-            "linear-gradient(hsl(260,80%,60%) 1px, transparent 1px), linear-gradient(90deg, hsl(260,80%,60%) 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
-        }}
-      />
-
-      {/* ═══ Mission Header ═══ */}
+      {/* ═══ Header ═══ */}
       <motion.div
-        initial={{ y: -30, opacity: 0 }}
+        initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.1, duration: 0.5 }}
-        className="shrink-0 relative z-10 border-b border-white/10"
-        style={{
-          background: `linear-gradient(135deg, ${persona.accentColor}15, transparent)`,
-          backdropFilter: "blur(20px)",
-        }}
+        transition={{ delay: 0.1, duration: 0.4 }}
+        className="shrink-0 relative z-10 border-b border-border/40 bg-background/80 backdrop-blur-xl"
       >
-        <div className="flex items-center justify-between max-w-4xl mx-auto px-4 py-3">
+        <div className="flex items-center justify-between max-w-3xl mx-auto px-4 py-3">
           <div className="flex items-center gap-3">
             <button
               onClick={onBack}
-              className="text-white/40 hover:text-white transition-colors text-sm flex items-center gap-1"
+              className="text-muted-foreground hover:text-foreground transition-colors text-sm flex items-center gap-1"
             >
               ← Back
             </button>
-            <div className="hidden sm:block h-4 w-px bg-white/10" />
+            <div className="hidden sm:block h-4 w-px bg-border/60" />
             <div className="hidden sm:flex items-center gap-2">
-              <span className="text-xs font-bold px-2 py-0.5 rounded-md text-white" style={{ background: persona.accentColor }}>
-                LVL {level}
-              </span>
+              <span className="text-lg">{persona.emoji}</span>
               <div>
-                <p className="text-[10px] tracking-[0.2em] uppercase text-white/30">Mission</p>
-                <p className="text-sm font-display font-bold text-white">Financial Freedom</p>
+                <p className="text-sm font-display font-semibold text-foreground">{persona.name}</p>
+                <p className="text-[10px] text-muted-foreground">AI Finance Coach</p>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 md:gap-6">
-            {/* XP Progress */}
-            <div className="hidden md:block">
-              <p className="text-[10px] text-white/30 mb-1">XP Progress</p>
-              <div className="w-24 h-2 bg-white/10 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: "65%" }}
-                  transition={{ delay: 0.5, duration: 1.2 }}
-                  className="h-full rounded-full"
-                  style={{ background: `linear-gradient(90deg, ${persona.accentColor}, ${persona.accentColor}aa)` }}
-                />
-              </div>
-            </div>
-
-            {/* Score */}
+          <div className="flex items-center gap-4">
             <div className="text-center">
-              <p className="text-[10px] text-white/30">Score</p>
-              <p className="text-sm font-display font-bold" style={{ color: persona.accentColor }}>{score}</p>
+              <p className="text-[10px] text-muted-foreground">Streak</p>
+              <p className="text-sm font-display font-bold text-foreground">🔥 7d</p>
             </div>
-
-            {/* Streak */}
-            <div className="text-center">
-              <p className="text-[10px] text-white/30">Streak</p>
-              <p className="text-sm font-display font-bold text-white">🔥 {streak}d</p>
-            </div>
-
-            {/* Avatar */}
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-lg border border-white/10"
-              style={{ background: `${persona.accentColor}20` }}
-            >
-              {persona.emoji}
+            <div className="text-center hidden sm:block">
+              <p className="text-[10px] text-muted-foreground">Score</p>
+              <p className="text-sm font-display font-bold" style={{ color: accentColor }}>740</p>
             </div>
           </div>
         </div>
       </motion.div>
 
-      {/* ═══ Conversation Area ═══ */}
+      {/* ═══ Chat Area ═══ */}
       <div className="flex-1 overflow-y-auto relative z-10">
-        <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
+        <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
           <AnimatePresence mode="popLayout">
             {messages.map((msg) => (
               <motion.div
                 key={msg.id}
-                initial={{ opacity: 0, y: 20, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.4, type: "spring", stiffness: 300, damping: 30 }}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 30 }}
                 layout
               >
                 {msg.role === "ai" ? (
-                  <div className="space-y-4">
-                    {/* AI Message Card */}
-                    <div
-                      className="p-5 md:p-6 rounded-2xl border border-white/10 shadow-lg"
-                      style={{
-                        background: `linear-gradient(135deg, hsl(260,40%,12%), hsl(260,30%,8%))`,
-                        backdropFilter: "blur(20px)",
-                      }}
-                    >
-                      <div className="flex items-start gap-3 mb-3">
+                  <div className="space-y-3">
+                    <div className="p-4 sm:p-5 rounded-2xl border border-border/50 bg-background/80 backdrop-blur-sm shadow-sm">
+                      <div className="flex items-start gap-3 mb-2">
                         <div
-                          className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold border border-white/10"
-                          style={{ background: `${persona.accentColor}20`, color: persona.accentColor }}
+                          className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-sm"
+                          style={{ background: `hsl(${persona.accentHsl} / 0.1)`, color: accentColor }}
                         >
-                          AI
+                          {persona.emoji}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-white/30 mb-0.5">FinTrack AI · just now</p>
-                        </div>
+                        <p className="text-xs text-muted-foreground pt-1.5">AI Coach · just now</p>
                       </div>
-                      <p className="text-sm md:text-base leading-relaxed text-white/80 pl-11">
-                        {msg.text}
-                      </p>
+                      <p className="text-sm leading-relaxed text-foreground/80 pl-11">{msg.text}</p>
                     </div>
 
-                    {/* Insight Cards */}
                     {msg.insights && msg.insights.length > 0 && (
-                      <div className="grid grid-cols-2 gap-3 pl-4 md:pl-8">
+                      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 pl-2 sm:pl-6">
                         {msg.insights.map((insight, idx) => (
                           <motion.div
                             key={insight.label}
-                            initial={{ opacity: 0, y: 15 }}
+                            initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.15 * idx + 0.3, duration: 0.4 }}
-                            className="p-4 rounded-xl border border-white/10 relative overflow-hidden group"
-                            style={{
-                              background: `linear-gradient(135deg, ${CHART_COLORS[idx % CHART_COLORS.length]}08, transparent)`,
-                            }}
+                            transition={{ delay: 0.12 * idx + 0.2, duration: 0.3 }}
+                            className="p-3 sm:p-4 rounded-xl border border-border/50 bg-background/80 backdrop-blur-sm shadow-sm"
                           >
-                            {/* Accent bar */}
                             <div
-                              className="absolute top-0 left-0 w-1 h-full rounded-l-xl"
+                              className="w-1 h-full absolute top-0 left-0 rounded-l-xl"
                               style={{ background: CHART_COLORS[idx % CHART_COLORS.length] }}
                             />
-                            <p className="text-[10px] uppercase tracking-wider text-white/30 mb-1 pl-2">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
                               {insight.label}
                             </p>
-                            <p className="font-display text-lg md:text-xl font-bold text-white pl-2">
+                            <p className="font-display text-base sm:text-lg font-bold text-foreground">
                               <AnimatedValue value={insight.value} />
                             </p>
                             {insight.change && (
-                              <p className={`text-xs mt-1 pl-2 ${
+                              <p className={`text-[11px] mt-0.5 ${
                                 insight.positive
-                                  ? "text-[hsl(152,69%,50%)]"
+                                  ? "text-[hsl(152,69%,41%)]"
                                   : insight.positive === false
-                                  ? "text-[hsl(0,72%,60%)]"
-                                  : "text-white/30"
+                                  ? "text-[hsl(0,72%,51%)]"
+                                  : "text-muted-foreground"
                               }`}>
                                 {insight.change}
                               </p>
                             )}
 
-                            {/* Mini Chart */}
                             {insight.chartData && (
-                              <div className="mt-2 h-12">
+                              <div className="mt-2 h-10">
                                 <ResponsiveContainer width="100%" height="100%">
                                   {insight.chartData.length <= 2 ? (
                                     <PieChart>
-                                      <Pie
-                                        data={insight.chartData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={10}
-                                        outerRadius={20}
-                                        dataKey="value"
-                                        strokeWidth={0}
-                                      >
+                                      <Pie data={insight.chartData} cx="50%" cy="50%" innerRadius={8} outerRadius={16} dataKey="value" strokeWidth={0}>
                                         {insight.chartData.map((_, ci) => (
-                                          <Cell key={ci} fill={ci === 0 ? persona.accentColor : "hsl(0,0%,25%)"} />
+                                          <Cell key={ci} fill={ci === 0 ? accentColor : "hsl(0,0%,90%)"} />
                                         ))}
                                       </Pie>
                                     </PieChart>
@@ -377,13 +301,11 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
                     )}
                   </div>
                 ) : (
-                  /* User Message */
                   <div className="flex justify-end">
-                    <div
-                      className="px-5 py-3.5 rounded-2xl rounded-br-md max-w-[80%] shadow-md border border-white/10"
-                      style={{ background: persona.accentColor }}
+                    <div className="px-4 py-3 rounded-2xl rounded-br-md max-w-[80%] shadow-sm text-background text-sm"
+                      style={{ background: accentColor }}
                     >
-                      <p className="text-sm leading-relaxed text-white">{msg.text}</p>
+                      {msg.text}
                     </div>
                   </div>
                 )}
@@ -391,34 +313,30 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
             ))}
           </AnimatePresence>
 
-          {/* Typing Indicator */}
           <AnimatePresence>
             {isTyping && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="p-5 rounded-2xl border border-white/10"
-                style={{ background: `linear-gradient(135deg, hsl(260,40%,12%), hsl(260,30%,8%))` }}
+                exit={{ opacity: 0 }}
+                className="p-4 rounded-2xl border border-border/50 bg-background/80 backdrop-blur-sm shadow-sm"
               >
                 <div className="flex items-center gap-3">
-                  <div
-                    className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold"
-                    style={{ background: `${persona.accentColor}20`, color: persona.accentColor }}
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm"
+                    style={{ background: `hsl(${persona.accentHsl} / 0.1)` }}
                   >
-                    AI
+                    {persona.emoji}
                   </div>
                   <div className="flex gap-1.5 items-center">
                     {[0, 1, 2].map((i) => (
                       <motion.div
                         key={i}
-                        animate={{ y: [0, -6, 0] }}
-                        transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15 }}
-                        className="w-2 h-2 rounded-full"
-                        style={{ background: persona.accentColor }}
+                        animate={{ y: [0, -4, 0] }}
+                        transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.12 }}
+                        className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40"
                       />
                     ))}
-                    <span className="text-xs text-white/30 ml-2">thinking...</span>
+                    <span className="text-xs text-muted-foreground ml-2">thinking...</span>
                   </div>
                 </div>
               </motion.div>
@@ -429,38 +347,27 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
         </div>
       </div>
 
-      {/* ═══ Quick Actions (Power-ups) + Input ═══ */}
-      <div
-        className="shrink-0 border-t border-white/10 relative z-10"
-        style={{ background: "hsl(250,50%,6%)", backdropFilter: "blur(20px)" }}
-      >
-        {/* Power-up Buttons */}
+      {/* ═══ Quick Actions + Input ═══ */}
+      <div className="shrink-0 border-t border-border/40 bg-background/80 backdrop-blur-xl relative z-10">
         <div className="max-w-3xl mx-auto px-4 pt-3 pb-2">
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
             {quickActions.map((action) => (
               <motion.button
                 key={action.label}
-                whileHover={{ scale: 1.08, y: -2 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.97 }}
                 onClick={() => sendMessage(action.label)}
                 disabled={isTyping}
-                className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-medium transition-all duration-200 disabled:opacity-30"
-                style={{
-                  borderColor: `${action.color}30`,
-                  background: `${action.color}10`,
-                  color: action.color,
-                  boxShadow: `0 0 20px ${action.color}10`,
-                }}
+                className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border/50 bg-background text-xs font-medium text-foreground/70 hover:text-foreground hover:border-border hover:shadow-sm transition-all duration-200 disabled:opacity-30"
               >
-                <span className="text-base">{action.icon}</span>
+                <span>{action.icon}</span>
                 {action.label}
               </motion.button>
             ))}
           </div>
         </div>
 
-        {/* Input */}
-        <div className="max-w-3xl mx-auto px-4 pb-4">
+        <div className="max-w-3xl mx-auto px-4 pb-4 sm:pb-5">
           <div className="flex gap-2">
             <input
               type="text"
@@ -469,15 +376,15 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
               onKeyDown={(e) => e.key === "Enter" && !isTyping && handleSend()}
               placeholder="Ask your AI coach anything..."
               disabled={isTyping}
-              className="flex-1 px-5 py-3.5 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-white/10 transition-all disabled:opacity-50"
+              className="flex-1 px-4 py-3 rounded-2xl border border-border/50 bg-background text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-border/50 transition-all disabled:opacity-50 shadow-sm"
             />
             <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
               onClick={handleSend}
               disabled={isTyping || !input.trim()}
-              className="px-5 py-3.5 rounded-xl text-sm font-medium text-white transition-opacity disabled:opacity-30"
-              style={{ background: persona.accentColor }}
+              className="px-5 py-3 rounded-2xl text-sm font-medium text-background transition-opacity disabled:opacity-30 shadow-sm"
+              style={{ background: accentColor }}
             >
               Send
             </motion.button>
