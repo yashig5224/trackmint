@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart, Bar, ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
+import { Mic, Send, LogOut, Settings, Sparkles, TrendingUp, AlertTriangle, Target } from "lucide-react";
 import type { Persona } from "./PersonaSelection";
 
 interface Message {
@@ -36,15 +37,8 @@ const aiResponses: Record<string, { text: string; insights: Insight[] }> = {
       { label: "Savings", value: "20%", change: "₹11,000", positive: true, chartData: [{ name: "Needs", value: 50 }, { name: "Wants", value: 30 }, { name: "Savings", value: 20 }] },
     ],
   },
-  "Save more money": {
-    text: "I found a few quick wins to boost your savings. Small changes can make a big difference!",
-    insights: [
-      { label: "Food spending reduced", value: "12%", change: "Potential ₹1,200 saved", positive: true },
-      { label: "Switch Mobile Plan", value: "₹400/mo", change: "Cheaper plan found", positive: true },
-    ],
-  },
-  "Show subscriptions": {
-    text: "You currently have 8 active subscriptions. I noticed a few you haven't used recently.",
+  "Detect waste": {
+    text: "I found a few subscriptions you haven't used recently. Cutting these will save you a good amount annually.",
     insights: [
       { label: "Active Subs", value: "8", change: "₹2,840/mo" },
       { label: "Unused Subs", value: "3", change: "Save ₹1,150/mo", positive: true, chartData: [{ name: "Active", value: 5 }, { name: "Unused", value: 3 }] },
@@ -62,8 +56,8 @@ const aiResponses: Record<string, { text: string; insights: Insight[] }> = {
 const quickActions = [
   "Analyze my spending",
   "Create a budget",
+  "Detect waste",
   "Save more money",
-  "Show subscriptions",
   "Goal planning"
 ];
 
@@ -111,7 +105,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
     {
       id: 0,
       role: "ai",
-      text: `Welcome to your Financial Mission! 👋 I'm your personalized ${persona.name} Coach. What's our focus for today?`,
+      text: `Welcome to your Financial Mission! 👋 I'm your personalized ${persona.name} Coach. I've been analyzing your recent transactions. What's our focus for today?`,
     },
   ]);
   const [input, setInput] = useState("");
@@ -146,7 +140,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
         insights: response.insights,
       };
       setMessages((prev) => [...prev, aiMsg]);
-    }, 1200 + Math.random() * 800); // More natural typing delay
+    }, 1500); // 1.5s typing delay
   };
 
   const handleSend = () => {
@@ -160,174 +154,156 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
-      className="flex flex-col h-[100dvh] w-screen relative overflow-hidden bg-background"
+      className="flex flex-col h-[100dvh] w-screen relative overflow-hidden bg-[#fafafa]"
     >
-      {/* Immersive Background: Soft light beams, particles, layered depth */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(240,40%,98%)] to-[hsl(220,30%,96%)] pointer-events-none" />
-      <div className="absolute top-[-20%] left-[10%] w-[600px] h-[600px] rounded-full bg-[hsl(262,83%,58%/0.03)] blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[10%] w-[500px] h-[500px] rounded-full bg-[hsl(217,91%,60%/0.04)] blur-[100px] pointer-events-none" />
-      <div className="absolute top-[30%] left-[50%] -translate-x-1/2 w-[800px] h-[300px] rounded-[100%] bg-[hsl(38,92%,50%/0.02)] blur-[100px] pointer-events-none" />
+      {/* Cinematic Background */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50/60 via-transparent to-transparent pointer-events-none" />
+      <div className="absolute top-[20%] left-[-10%] w-[800px] h-[800px] rounded-full bg-purple-50/40 blur-[120px] pointer-events-none mix-blend-multiply" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-blue-50/40 blur-[100px] pointer-events-none mix-blend-multiply" />
 
       {/* Floating particles */}
-      {Array.from({ length: 8 }).map((_, i) => (
+      {Array.from({ length: 15 }).map((_, i) => (
         <motion.div
           key={`bg-particle-${i}`}
           animate={{ 
-            y: ["0vh", "-100vh"],
+            y: ["100vh", "-10vh"],
             x: [0, Math.sin(i) * 50, 0],
-            opacity: [0, 0.5, 0]
+            opacity: [0, 0.4, 0],
+            rotate: [0, 360]
           }}
           transition={{ 
-            duration: 15 + Math.random() * 10, 
+            duration: 10 + Math.random() * 20, 
             repeat: Infinity, 
             ease: "linear",
             delay: Math.random() * 5
           }}
-          className="absolute bottom-0 w-2 h-2 rounded-full bg-[hsl(217,91%,60%/0.3)] blur-[1px] pointer-events-none"
-          style={{ left: `${10 + Math.random() * 80}%` }}
+          className="absolute bottom-0 w-3 h-3 rounded-md bg-gradient-to-tr from-blue-200/30 to-purple-200/30 backdrop-blur-sm pointer-events-none"
+          style={{ left: `${5 + Math.random() * 90}%` }}
         />
       ))}
 
       {/* ═══ Top Mission HUD Bar ═══ */}
       <motion.div
-        initial={{ y: -20, opacity: 0 }}
+        initial={{ y: -40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-        className="shrink-0 relative z-20 pt-4 pb-2 px-4 sm:px-6 sm:pt-6"
+        transition={{ delay: 0.3, duration: 0.6, type: "spring" }}
+        className="shrink-0 relative z-30 px-4 sm:px-8 py-6"
       >
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-          {/* Back & Mission Title */}
-          <div className="flex items-center gap-3 sm:gap-5">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <button
               onClick={onBack}
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-background/50 border border-border/50 backdrop-blur-md text-foreground hover:bg-background/80 transition-colors shadow-sm"
+              className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white/60 border border-white backdrop-blur-xl text-gray-900 hover:bg-white transition-all shadow-sm group"
             >
-              ←
+              <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
             </button>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold tracking-widest uppercase text-[hsl(262,83%,58%)]">Current Mission</span>
-              </div>
-              <h2 className="text-base sm:text-xl font-display font-bold text-foreground tracking-tight flex items-center gap-2">
-                Financial Freedom <span className="text-xl">🎯</span>
+            <div className="hidden sm:block">
+              <p className="text-xs font-bold tracking-widest uppercase text-blue-600 mb-1">Current Mission</p>
+              <h2 className="text-2xl font-display font-bold text-gray-900 flex items-center gap-2">
+                Save ₹15,000 This Month <Target className="w-5 h-5 text-emerald-500" />
               </h2>
             </div>
           </div>
 
-          {/* Gamified Stats */}
-          <div className="flex items-center gap-3 sm:gap-6">
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/60 border border-border/50 backdrop-blur-md shadow-sm">
-              <span className="text-lg">🔥</span>
-              <div>
-                <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider leading-none">Streak</div>
-                <div className="text-sm font-bold text-foreground leading-none mt-0.5">12 Days</div>
+          <div className="flex items-center gap-4">
+            <div className="glass-card bg-white/60 border-white px-4 py-2 rounded-2xl flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span className="text-lg">🔥</span>
+                <div>
+                  <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider leading-none">Streak</p>
+                  <p className="text-sm font-bold text-gray-900 leading-none mt-1">12 Days</p>
+                </div>
+              </div>
+              <div className="w-px h-8 bg-gray-200" />
+              <div className="flex items-center gap-1.5">
+                <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-white font-bold text-sm">
+                  Lvl {persona.level}
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider leading-none">XP</p>
+                  <div className="w-16 h-1.5 bg-gray-200 rounded-full mt-1 overflow-hidden">
+                    <div className="h-full bg-blue-500 w-[65%]" />
+                  </div>
+                </div>
               </div>
             </div>
-            
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/60 border border-border/50 backdrop-blur-md shadow-sm">
-              <span className="text-lg">💎</span>
-              <div>
-                <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider leading-none">Coins</div>
-                <div className="text-sm font-bold text-foreground leading-none mt-0.5">2,450</div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-foreground text-background shadow-md">
-              <span className="text-lg" style={{ color: accentColor }}>★</span>
-              <div>
-                <div className="text-[10px] text-background/70 uppercase font-bold tracking-wider leading-none">Lvl {persona.level}</div>
-                <div className="text-sm font-bold leading-none mt-0.5">Rank up</div>
-              </div>
-            </div>
+            <button className="w-12 h-12 rounded-2xl bg-white/60 border border-white backdrop-blur-xl flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-white shadow-sm transition-all">
+              <Settings className="w-5 h-5" />
+            </button>
           </div>
-        </div>
-        
-        {/* Level Progress Bar */}
-        <div className="max-w-4xl mx-auto mt-4 h-1.5 w-full bg-border/40 rounded-full overflow-hidden">
-          <motion.div 
-            initial={{ width: 0 }}
-            animate={{ width: "65%" }}
-            transition={{ duration: 1, delay: 0.5, ease: "easeOut" }}
-            className="h-full rounded-full"
-            style={{ background: `linear-gradient(90deg, hsl(262,83%,58%), ${accentColor})` }}
-          />
         </div>
       </motion.div>
 
       {/* ═══ Main Chat Area ═══ */}
-      <div className="flex-1 overflow-y-auto relative z-10 scrollbar-none pb-32">
-        <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+      <div className="flex-1 overflow-y-auto relative z-10 scrollbar-none pb-40">
+        <div className="max-w-4xl mx-auto px-4 sm:px-8 space-y-10">
           <AnimatePresence mode="popLayout">
             {messages.map((msg) => (
               <motion.div
                 key={msg.id}
-                initial={{ opacity: 0, y: 20, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.4, type: "spring", stiffness: 250, damping: 25 }}
+                initial={{ opacity: 0, y: 20, filter: "blur(5px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                transition={{ duration: 0.5, type: "spring", stiffness: 200, damping: 20 }}
                 layout
                 className={`flex w-full ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 {msg.role === "ai" ? (
-                  <div className="flex gap-3 sm:gap-4 max-w-[90%] sm:max-w-[80%]">
+                  <div className="flex gap-4 sm:gap-6 max-w-[95%] sm:max-w-[85%]">
                     {/* AI Avatar */}
-                    <div className="shrink-0 relative">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-[14px] bg-background/80 backdrop-blur-xl border border-border/50 shadow-sm flex items-center justify-center text-xl sm:text-2xl z-10 relative">
+                    <div className="shrink-0 pt-2">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center text-2xl sm:text-3xl z-10 relative">
                         {persona.emoji}
                       </div>
-                      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(262,83%,58%/0.2)] to-transparent rounded-[14px] blur-md -z-10" />
                     </div>
                     
-                    {/* AI Message Card */}
+                    {/* AI Message Container */}
                     <div className="space-y-4 w-full">
-                      <div className="p-5 sm:p-6 rounded-[24px] rounded-tl-[8px] bg-background/70 backdrop-blur-xl border border-border/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden">
-                        {/* Soft pastel accent gradient inside card */}
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[hsl(262,83%,58%/0.5)] to-transparent opacity-50" />
-                        <p className="text-base sm:text-lg leading-relaxed text-foreground/90 font-medium">
+                      <div className="glass-card p-6 sm:p-8 rounded-[32px] rounded-tl-xl bg-white/80 border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-full blur-[20px] pointer-events-none" />
+                        <p className="text-lg sm:text-xl leading-relaxed text-gray-800 font-medium relative z-10">
                           {msg.text}
                         </p>
                       </div>
 
-                      {/* AI Insights Cards */}
+                      {/* Dynamic AI Insights */}
                       {msg.insights && msg.insights.length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {msg.insights.map((insight, idx) => (
                             <motion.div
                               key={insight.label}
                               initial={{ opacity: 0, y: 20 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: 0.2 + idx * 0.1, duration: 0.5, type: "spring" }}
-                              whileHover={{ y: -4, scale: 1.02 }}
-                              className="p-5 rounded-[20px] bg-background border border-border/60 shadow-sm hover:shadow-md transition-all relative overflow-hidden group"
+                              className="glass-card p-6 rounded-[24px] bg-white border border-gray-100 shadow-sm relative overflow-hidden group"
                             >
-                              <div className="absolute -right-6 -top-6 w-24 h-24 bg-gradient-to-br from-border/50 to-transparent rounded-full blur-2xl group-hover:from-[hsl(262,83%,58%/0.1)] transition-colors" />
-                              
-                              <p className="text-xs uppercase tracking-widest font-bold text-muted-foreground mb-2">
+                              <p className="text-xs uppercase tracking-widest font-bold text-gray-400 mb-2">
                                 {insight.label}
                               </p>
-                              <p className="font-display text-2xl sm:text-3xl font-bold text-foreground mb-1">
+                              <p className="font-display text-3xl font-bold text-gray-900 mb-3">
                                 <AnimatedValue value={insight.value} />
                               </p>
                               
                               {insight.change && (
-                                <div className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-md ${
+                                <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg ${
                                   insight.positive
-                                    ? "bg-[hsl(152,69%,41%/0.1)] text-[hsl(152,69%,41%)]"
+                                    ? "bg-emerald-50 text-emerald-700"
                                     : insight.positive === false
-                                    ? "bg-[hsl(0,72%,51%/0.1)] text-[hsl(0,72%,51%)]"
-                                    : "bg-muted text-muted-foreground"
+                                    ? "bg-rose-50 text-rose-700"
+                                    : "bg-gray-100 text-gray-600"
                                 }`}>
-                                  {insight.positive ? "↗" : insight.positive === false ? "↘" : "→"} {insight.change}
+                                  {insight.positive ? <TrendingUp className="w-3.5 h-3.5" /> : insight.positive === false ? <AlertTriangle className="w-3.5 h-3.5" /> : null} 
+                                  {insight.change}
                                 </div>
                               )}
 
                               {insight.chartData && (
-                                <div className="mt-4 h-12 w-full opacity-80">
+                                <div className="mt-5 h-16 w-full">
                                   <ResponsiveContainer width="100%" height="100%">
                                     {insight.chartData.length <= 2 ? (
                                       <PieChart>
-                                        <Pie data={insight.chartData} cx="80%" cy="50%" innerRadius={12} outerRadius={24} dataKey="value" strokeWidth={0}>
+                                        <Pie data={insight.chartData} cx="85%" cy="50%" innerRadius={18} outerRadius={32} dataKey="value" strokeWidth={0}>
                                           {insight.chartData.map((_, ci) => (
-                                            <Cell key={ci} fill={ci === 0 ? accentColor : "hsl(0,0%,90%)"} />
+                                            <Cell key={ci} fill={ci === 0 ? accentColor : "hsl(220, 20%, 94%)"} />
                                           ))}
                                         </Pie>
                                       </PieChart>
@@ -351,9 +327,9 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
                   </div>
                 ) : (
                   <div className="max-w-[85%] sm:max-w-[70%]">
-                    <div className="p-4 sm:p-5 rounded-[24px] rounded-tr-[8px] bg-foreground text-background shadow-lg relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
-                      <p className="text-base sm:text-lg leading-relaxed relative z-10">
+                    <div className="p-6 sm:p-8 rounded-[32px] rounded-tr-xl bg-gray-900 text-white shadow-xl shadow-gray-900/10 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-[30px]" />
+                      <p className="text-lg sm:text-xl leading-relaxed relative z-10">
                         {msg.text}
                       </p>
                     </div>
@@ -366,85 +342,74 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
           <AnimatePresence>
             {isTyping && (
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="flex gap-4 max-w-[80%]"
+                className="flex gap-4 sm:gap-6 max-w-[80%]"
               >
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-[14px] bg-background/80 backdrop-blur-xl border border-border/50 flex items-center justify-center text-xl sm:text-2xl shrink-0 opacity-70">
-                  {persona.emoji}
+                <div className="shrink-0 pt-2 opacity-50">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white border border-gray-100 flex items-center justify-center text-2xl sm:text-3xl grayscale">
+                    {persona.emoji}
+                  </div>
                 </div>
-                <div className="p-5 rounded-[24px] rounded-tl-[8px] bg-background/50 backdrop-blur-xl border border-border/50 flex items-center gap-2">
+                <div className="p-6 rounded-[24px] rounded-tl-xl bg-white/60 border border-white backdrop-blur-xl flex items-center gap-2 h-[72px]">
                   {[0, 1, 2].map((i) => (
                     <motion.div
                       key={i}
-                      animate={{ y: [0, -6, 0], scale: [1, 1.2, 1] }}
+                      animate={{ y: [0, -8, 0], scale: [1, 1.2, 1] }}
                       transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15 }}
-                      className="w-2 h-2 rounded-full"
-                      style={{ background: accentColor }}
+                      className="w-2.5 h-2.5 bg-gray-400 rounded-full"
                     />
                   ))}
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
-
           <div ref={messagesEndRef} className="h-4" />
         </div>
       </div>
 
-      {/* ═══ Floating Action / Input Area ═══ */}
-      <motion.div 
+      {/* ═══ Smart Input Dock ═══ */}
+      <motion.div
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.4, duration: 0.5, type: "spring" }}
-        className="absolute bottom-0 left-0 right-0 z-30 pointer-events-none"
+        transition={{ delay: 0.4, duration: 0.6, type: "spring" }}
+        className="absolute bottom-0 left-0 w-full z-30 pb-6 pt-10 px-4 sm:px-8 bg-gradient-to-t from-[#fafafa] via-[#fafafa]/80 to-transparent"
       >
-        <div className="max-w-4xl mx-auto px-4 pb-6 sm:pb-8 pt-10 bg-gradient-to-t from-background via-background/90 to-transparent pointer-events-auto">
-          
-          {/* Smart Suggestion Chips */}
-          <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-4 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="max-w-4xl mx-auto space-y-4">
+          {/* Quick Actions (Scrollable) */}
+          <div className="flex gap-3 overflow-x-auto scrollbar-none pb-2 mask-linear-fade">
             {quickActions.map((action, i) => (
-              <motion.button
-                key={action}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 + i * 0.05 }}
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => sendMessage(action)}
-                disabled={isTyping}
-                className="shrink-0 px-4 sm:px-5 py-2.5 rounded-full border border-border/60 bg-background/80 backdrop-blur-xl text-sm font-medium text-foreground hover:border-border hover:shadow-md transition-all disabled:opacity-40 disabled:hover:scale-100 disabled:hover:y-0"
+              <button
+                key={i}
+                onClick={() => { setInput(action); setTimeout(() => handleSend(), 100); }}
+                className="shrink-0 px-4 py-2.5 rounded-xl bg-white border border-gray-100 shadow-sm text-sm font-medium text-gray-700 hover:text-gray-900 hover:border-gray-200 hover:shadow-md transition-all flex items-center gap-2"
               >
-                {action}
-              </motion.button>
+                <Sparkles className="w-3.5 h-3.5 text-blue-500" /> {action}
+              </button>
             ))}
           </div>
 
-          {/* Floating Input Container */}
-          <div className="relative flex items-center bg-background/90 backdrop-blur-2xl border border-border/80 rounded-[28px] p-2 shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
-            <button className="w-12 h-12 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors shrink-0">
-              🎤
+          {/* Floating Input Area */}
+          <div className="glass-card bg-white/80 border-white p-2 rounded-[28px] shadow-[0_8px_30px_rgb(0,0,0,0.06)] flex items-center gap-2">
+            <button className="w-12 h-12 flex items-center justify-center rounded-2xl text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors shrink-0">
+              <Mic className="w-6 h-6" />
             </button>
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && !isTyping && handleSend()}
-              placeholder="Ask your AI coach anything..."
-              disabled={isTyping}
-              className="flex-1 bg-transparent px-2 py-3 text-base sm:text-lg text-foreground placeholder:text-muted-foreground/50 focus:outline-none disabled:opacity-50"
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              placeholder="Ask me anything about your finances..."
+              className="flex-1 bg-transparent border-none outline-none text-lg text-gray-900 placeholder:text-gray-400 px-2"
             />
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <button
               onClick={handleSend}
-              disabled={isTyping || !input.trim()}
-              className="w-12 h-12 flex items-center justify-center rounded-[20px] text-background shadow-md disabled:opacity-30 disabled:hover:scale-100 shrink-0 ml-2"
-              style={{ background: `linear-gradient(135deg, hsl(262,83%,58%), ${accentColor})` }}
+              disabled={!input.trim()}
+              className="w-12 h-12 flex items-center justify-center rounded-2xl bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50 disabled:hover:bg-gray-900 transition-colors shrink-0 shadow-md"
             >
-              ↑
-            </motion.button>
+              <Send className="w-5 h-5 -ml-0.5" />
+            </button>
           </div>
         </div>
       </motion.div>

@@ -5,7 +5,9 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar,
 } from "recharts";
+import { Sparkles, Target, Wallet, TrendingUp, CreditCard, ChevronRight, LayoutDashboard, Search, Bell, History, Flag, BookOpen, MessageSquare } from "lucide-react";
 
+// Mock Data
 const areaData = [
   { month: "Jan", income: 45000, expense: 32000 },
   { month: "Feb", income: 48000, expense: 35000 },
@@ -17,70 +19,37 @@ const areaData = [
 ];
 
 const categoryData = [
-  { name: "Food", value: 8240, color: "hsl(38, 92%, 50%)" },
-  { name: "Transport", value: 4500, color: "hsl(262, 83%, 58%)" },
-  { name: "Shopping", value: 6200, color: "hsl(330, 81%, 60%)" },
-  { name: "Bills", value: 5800, color: "hsl(217, 91%, 60%)" },
-  { name: "Entertainment", value: 3200, color: "hsl(152, 69%, 41%)" },
-];
-
-const weeklyData = [
-  { day: "Mon", amount: 1200 },
-  { day: "Tue", amount: 800 },
-  { day: "Wed", amount: 2400 },
-  { day: "Thu", amount: 1800 },
-  { day: "Fri", amount: 3200 },
-  { day: "Sat", amount: 2800 },
-  { day: "Sun", amount: 1500 },
+  { name: "Food", value: 8240, color: "hsl(217, 91%, 60%)" }, // Blue
+  { name: "Transport", value: 4500, color: "hsl(262, 83%, 58%)" }, // Purple
+  { name: "Shopping", value: 6200, color: "hsl(330, 81%, 60%)" }, // Pink
+  { name: "Bills", value: 5800, color: "hsl(152, 69%, 41%)" }, // Green
 ];
 
 const transactions = [
-  { id: 1, name: "Swiggy Order", category: "Food", amount: -520, date: "Today, 2:30 PM" },
-  { id: 2, name: "Salary Credit", category: "Income", amount: 55000, date: "Yesterday" },
-  { id: 3, name: "Uber Ride", category: "Transport", amount: -340, date: "Yesterday" },
-  { id: 4, name: "Netflix Subscription", category: "Entertainment", amount: -649, date: "2 days ago" },
-  { id: 5, name: "Grocery Store", category: "Food", amount: -1240, date: "3 days ago" },
-  { id: 6, name: "Electricity Bill", category: "Bills", amount: -2100, date: "4 days ago" },
-  { id: 7, name: "Freelance Payment", category: "Income", amount: 12000, date: "5 days ago" },
-  { id: 8, name: "Gym Membership", category: "Health", amount: -1500, date: "1 week ago" },
-];
-
-const budgets = [
-  { category: "Food", limit: 10000, spent: 8240, color: "hsl(38, 92%, 50%)" },
-  { category: "Transport", limit: 5000, spent: 4500, color: "hsl(262, 83%, 58%)" },
-  { category: "Shopping", limit: 8000, spent: 6200, color: "hsl(330, 81%, 60%)" },
-  { category: "Entertainment", limit: 4000, spent: 3200, color: "hsl(152, 69%, 41%)" },
+  { id: 1, name: "Uber Ride", category: "Transport", amount: -340, date: "Today, 2:30 PM", icon: "🚗" },
+  { id: 2, name: "Salary Credit", category: "Income", amount: 55000, date: "Yesterday", icon: "💼" },
+  { id: 3, name: "Swiggy Order", category: "Food", amount: -520, date: "Yesterday", icon: "🍔" },
+  { id: 4, name: "Netflix Subscription", category: "Entertainment", amount: -649, date: "2 days ago", icon: "🎬" },
 ];
 
 const goals = [
-  { name: "Emergency Fund", target: 200000, saved: 136000 },
-  { name: "Vacation", target: 80000, saved: 45000 },
-  { name: "New Laptop", target: 90000, saved: 72000 },
+  { name: "Emergency Fund", target: 200000, saved: 136000, icon: "🏦", color: "from-blue-500 to-cyan-400" },
+  { name: "Europe Trip", target: 150000, saved: 45000, icon: "✈️", color: "from-purple-500 to-pink-500" },
+  { name: "MacBook Pro", target: 120000, saved: 90000, icon: "💻", color: "from-emerald-500 to-teal-400" },
 ];
 
-const aiSuggestions = [
-  "Your food spending is 12% higher than last month. Consider meal prepping on weekends.",
-  "You're on track to reach your Emergency Fund goal by August 2026!",
-  "Tip: Cancel your unused Spotify subscription to save ₹1,188/year.",
+const aiInsights = [
+  { title: "Subscription Waste Detected", desc: "You haven't used Netflix in 3 weeks. Cancel to save ₹649/mo.", type: "warning" },
+  { title: "Great Savings Streak", desc: "You saved 12% more than last week. Keep it up!", type: "success" },
+  { title: "Upcoming Bill", desc: "Electricity bill of ₹2,100 is due in 3 days.", type: "info" },
 ];
 
-// Desktop sidebar items
 const sidebarItems = [
-  { icon: "◻", label: "Overview", id: "overview" },
-  { icon: "↕", label: "Transactions", id: "transactions" },
-  { icon: "◔", label: "Budgets", id: "budgets" },
-  { icon: "◎", label: "Goals", id: "goals" },
-  { icon: "◈", label: "Reports", id: "reports" },
-  { icon: "◇", label: "AI Coach", id: "chat" },
-];
-
-// Mobile bottom tabs
-const bottomTabs = [
-  { icon: "◻", label: "Overview", id: "overview" },
-  { icon: "↕", label: "Transactions", id: "transactions" },
-  { icon: "◎", label: "Goals", id: "goals" },
-  { icon: "◈", label: "Reports", id: "reports" },
-  { icon: "◇", label: "AI Coach", id: "chat" },
+  { icon: LayoutDashboard, label: "Overview", id: "overview" },
+  { icon: History, label: "Transactions", id: "transactions" },
+  { icon: Flag, label: "Goals", id: "goals" },
+  { icon: BookOpen, label: "Reports", id: "reports" },
+  { icon: MessageSquare, label: "AI Coach", id: "chat" },
 ];
 
 const Dashboard = () => {
@@ -97,347 +66,388 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[hsl(0,0%,98%)] flex">
+    <div className="min-h-screen bg-[#fafafa] flex overflow-hidden selection:bg-primary/10 relative">
+      {/* Background Soft Blobs */}
+      <div className="fixed top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-blue-100/50 mix-blend-multiply blur-[120px] pointer-events-none" />
+      <div className="fixed bottom-[-10%] right-[-10%] w-[500px] h-[500px] rounded-full bg-purple-100/50 mix-blend-multiply blur-[120px] pointer-events-none" />
+
       {/* ═══ Desktop Sidebar ═══ */}
       <aside
-        className={`hidden lg:flex flex-col shrink-0 border-r border-border/60 bg-background/80 backdrop-blur-xl transition-all duration-300 ${
-          sidebarCollapsed ? "w-16" : "w-56"
+        className={`hidden lg:flex flex-col shrink-0 border-r border-border/40 bg-white/60 backdrop-blur-xl z-20 transition-all duration-300 ${
+          sidebarCollapsed ? "w-20" : "w-64"
         }`}
       >
-        <div className="flex items-center justify-between p-4">
+        <div className="flex items-center justify-between p-6">
           {!sidebarCollapsed && (
-            <Link to="/" className="font-display text-lg font-bold tracking-tight">
-              FinTrack<span className="text-muted-foreground font-normal">AI</span>
+            <Link to="/" className="inline-flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-gray-900 to-gray-700 flex items-center justify-center shadow-md">
+                <Sparkles className="w-4 h-4 text-white" />
+              </div>
+              <span className="font-display text-lg font-bold tracking-tight">FinTrack</span>
             </Link>
           )}
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors text-xs"
-          >
-            {sidebarCollapsed ? "→" : "←"}
-          </button>
+          {sidebarCollapsed && (
+             <Link to="/" className="mx-auto">
+             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-gray-900 to-gray-700 flex items-center justify-center shadow-md">
+               <Sparkles className="w-4 h-4 text-white" />
+             </div>
+           </Link>
+          )}
         </div>
 
-        <nav className="flex-1 px-2 space-y-1 mt-2">
-          {sidebarItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => handleTabClick(item.id)}
-              className={`w-full flex items-center gap-3 rounded-xl text-sm transition-all duration-200 ${
-                sidebarCollapsed ? "justify-center px-2 py-3" : "px-3 py-2.5"
-              } ${
-                activeTab === item.id
-                  ? "bg-foreground text-background font-medium shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-              }`}
-            >
-              <span className="text-base">{item.icon}</span>
-              {!sidebarCollapsed && item.label}
-            </button>
-          ))}
-        </nav>
-
-        {!sidebarCollapsed && (
-          <div className="p-4 border-t border-border/40">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-2xl bg-foreground flex items-center justify-center">
-                <span className="text-background text-xs font-medium">JD</span>
-              </div>
-              <div>
-                <p className="text-sm font-medium">John Doe</p>
-                <p className="text-xs text-muted-foreground">john@example.com</p>
-              </div>
-            </div>
-          </div>
-        )}
-      </aside>
-
-      {/* ═══ Main Content ═══ */}
-      <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
-        {/* Mobile/Tablet Header */}
-        <div className="lg:hidden sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/40">
-          <div className="flex items-center justify-between px-4 sm:px-6 h-14">
-            <Link to="/" className="font-display text-lg font-bold tracking-tight">
-              FinTrack<span className="text-muted-foreground font-normal">AI</span>
-            </Link>
-            <div className="w-8 h-8 rounded-2xl bg-foreground flex items-center justify-center">
-              <span className="text-background text-xs font-medium">JD</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-6xl mx-auto">
-          <AnimatePresence mode="wait">
-            {/* ═══ Overview Tab ═══ */}
-            {activeTab === "overview" && (
-              <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
-                <h1 className="font-display text-2xl sm:text-3xl font-bold mb-1">Good morning, John</h1>
-                <p className="text-muted-foreground text-sm mb-6 sm:mb-8">Here's your financial overview</p>
-
-                {/* Summary cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-                  {[
-                    { label: "Total Balance", value: "₹1,24,500", change: "+12.5%", positive: true },
-                    { label: "Monthly Income", value: "₹55,000", change: "+8%", positive: true },
-                    { label: "Monthly Expenses", value: "₹27,940", change: "-5.2%", positive: true },
-                    { label: "Monthly Savings", value: "₹27,060", change: "+23%", positive: true },
-                  ].map((card) => (
-                    <div key={card.label} className="p-4 sm:p-5 rounded-2xl border border-border/50 bg-background/80 backdrop-blur-sm shadow-sm">
-                      <p className="text-[11px] sm:text-xs text-muted-foreground mb-1">{card.label}</p>
-                      <p className="font-display text-lg sm:text-xl font-bold">{card.value}</p>
-                      <p className="text-[11px] sm:text-xs text-[hsl(152,69%,41%)] mt-1">{card.change}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Charts row */}
-                <div className="grid lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-                  <div className="lg:col-span-2 rounded-2xl border border-border/50 bg-background/80 backdrop-blur-sm p-4 sm:p-5 shadow-sm">
-                    <p className="text-sm font-medium mb-4">Income vs Expenses</p>
-                    <ResponsiveContainer width="100%" height={220}>
-                      <AreaChart data={areaData}>
-                        <defs>
-                          <linearGradient id="ig" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="hsl(152, 69%, 41%)" stopOpacity={0.15} />
-                            <stop offset="100%" stopColor="hsl(152, 69%, 41%)" stopOpacity={0} />
-                          </linearGradient>
-                          <linearGradient id="eg" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="hsl(0, 72%, 51%)" stopOpacity={0.15} />
-                            <stop offset="100%" stopColor="hsl(0, 72%, 51%)" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(0,0%,93%)" />
-                        <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(0,0%,55%)" }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 11, fill: "hsl(0,0%,55%)" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
-                        <Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} contentStyle={{ borderRadius: "12px", border: "1px solid hsl(0,0%,92%)", fontSize: "12px", boxShadow: "0 4px 12px hsl(0,0%,0%,0.06)" }} />
-                        <Area type="monotone" dataKey="income" stroke="hsl(152, 69%, 41%)" fill="url(#ig)" strokeWidth={2} />
-                        <Area type="monotone" dataKey="expense" stroke="hsl(0, 72%, 51%)" fill="url(#eg)" strokeWidth={2} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-
-                  <div className="rounded-2xl border border-border/50 bg-background/80 backdrop-blur-sm p-4 sm:p-5 shadow-sm">
-                    <p className="text-sm font-medium mb-2">Spending by Category</p>
-                    <ResponsiveContainer width="100%" height={140}>
-                      <PieChart>
-                        <Pie data={categoryData} cx="50%" cy="50%" innerRadius={30} outerRadius={55} dataKey="value" strokeWidth={0}>
-                          {categoryData.map((cat, i) => (
-                            <Cell key={i} fill={cat.color} />
-                          ))}
-                        </Pie>
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="space-y-1.5 mt-2">
-                      {categoryData.map((cat) => (
-                        <div key={cat.name} className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ background: cat.color }} />
-                            <span className="text-muted-foreground">{cat.name}</span>
-                          </div>
-                          <span className="font-medium">₹{cat.value.toLocaleString()}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Weekly + AI insights */}
-                <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
-                  <div className="rounded-2xl border border-border/50 bg-background/80 backdrop-blur-sm p-4 sm:p-5 shadow-sm">
-                    <p className="text-sm font-medium mb-4">This Week's Spending</p>
-                    <ResponsiveContainer width="100%" height={170}>
-                      <BarChart data={weeklyData}>
-                        <XAxis dataKey="day" tick={{ fontSize: 11, fill: "hsl(0,0%,55%)" }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 11, fill: "hsl(0,0%,55%)" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
-                        <Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} contentStyle={{ borderRadius: "12px", border: "1px solid hsl(0,0%,92%)", fontSize: "12px" }} />
-                        <Bar dataKey="amount" fill="hsl(0,0%,15%)" radius={[6, 6, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-
-                  <div className="rounded-2xl border border-border/50 bg-background/80 backdrop-blur-sm p-4 sm:p-5 shadow-sm">
-                    <p className="text-sm font-medium mb-4">✨ AI Insights</p>
-                    <div className="space-y-3">
-                      {aiSuggestions.map((tip, i) => (
-                        <div key={i} className="p-3.5 rounded-xl bg-[hsl(0,0%,96%)] text-xs leading-relaxed text-muted-foreground">
-                          {tip}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Recent transactions */}
-                <div className="rounded-2xl border border-border/50 bg-background/80 backdrop-blur-sm p-4 sm:p-5 shadow-sm">
-                  <p className="text-sm font-medium mb-4">Recent Transactions</p>
-                  <div className="space-y-3">
-                    {transactions.slice(0, 5).map((tx) => (
-                      <div key={tx.id} className="flex items-center justify-between py-1">
-                        <div>
-                          <p className="text-sm font-medium">{tx.name}</p>
-                          <p className="text-xs text-muted-foreground">{tx.category} · {tx.date}</p>
-                        </div>
-                        <p className={`text-sm font-medium ${tx.amount > 0 ? "text-[hsl(152,69%,41%)]" : ""}`}>
-                          {tx.amount > 0 ? "+" : ""}₹{Math.abs(tx.amount).toLocaleString()}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* ═══ Transactions Tab ═══ */}
-            {activeTab === "transactions" && (
-              <motion.div key="transactions" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
-                <h1 className="font-display text-2xl font-bold mb-6">Transactions</h1>
-                <div className="rounded-2xl border border-border/50 bg-background/80 backdrop-blur-sm divide-y divide-border/40 shadow-sm">
-                  {transactions.map((tx) => (
-                    <div key={tx.id} className="flex items-center justify-between p-4 sm:p-5">
-                      <div>
-                        <p className="text-sm font-medium">{tx.name}</p>
-                        <p className="text-xs text-muted-foreground">{tx.category} · {tx.date}</p>
-                      </div>
-                      <p className={`text-sm font-medium ${tx.amount > 0 ? "text-[hsl(152,69%,41%)]" : ""}`}>
-                        {tx.amount > 0 ? "+" : ""}₹{Math.abs(tx.amount).toLocaleString()}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-
-            {/* ═══ Budgets Tab ═══ */}
-            {activeTab === "budgets" && (
-              <motion.div key="budgets" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
-                <h1 className="font-display text-2xl font-bold mb-6">Budgets</h1>
-                <div className="space-y-3 sm:space-y-4">
-                  {budgets.map((b) => (
-                    <div key={b.category} className="rounded-2xl border border-border/50 bg-background/80 backdrop-blur-sm p-4 sm:p-5 shadow-sm">
-                      <div className="flex justify-between items-center mb-3">
-                        <p className="text-sm font-medium">{b.category}</p>
-                        <p className="text-xs text-muted-foreground">
-                          ₹{b.spent.toLocaleString()} / ₹{b.limit.toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="h-2.5 bg-[hsl(0,0%,95%)] rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${Math.min((b.spent / b.limit) * 100, 100)}%` }}
-                          transition={{ duration: 1, delay: 0.2 }}
-                          className="h-full rounded-full"
-                          style={{ background: b.color }}
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        ₹{(b.limit - b.spent).toLocaleString()} remaining
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-
-            {/* ═══ Goals Tab ═══ */}
-            {activeTab === "goals" && (
-              <motion.div key="goals" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
-                <h1 className="font-display text-2xl font-bold mb-6">Savings Goals</h1>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                  {goals.map((g) => {
-                    const pct = Math.round((g.saved / g.target) * 100);
-                    return (
-                      <div key={g.name} className="rounded-2xl border border-border/50 bg-background/80 backdrop-blur-sm p-4 sm:p-5 shadow-sm">
-                        <p className="text-sm font-medium mb-1">{g.name}</p>
-                        <p className="font-display text-2xl font-bold">{pct}%</p>
-                        <div className="h-2.5 bg-[hsl(0,0%,95%)] rounded-full overflow-hidden mt-3">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${pct}%` }}
-                            transition={{ duration: 1, delay: 0.2 }}
-                            className="h-full rounded-full bg-foreground"
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          ₹{g.saved.toLocaleString()} / ₹{g.target.toLocaleString()}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            )}
-
-            {/* ═══ Reports Tab ═══ */}
-            {activeTab === "reports" && (
-              <motion.div key="reports" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
-                <h1 className="font-display text-2xl font-bold mb-6">Reports</h1>
-                <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
-                  <div className="rounded-2xl border border-border/50 bg-background/80 backdrop-blur-sm p-4 sm:p-5 shadow-sm">
-                    <p className="text-sm font-medium mb-4">Monthly Trend</p>
-                    <ResponsiveContainer width="100%" height={240}>
-                      <AreaChart data={areaData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(0,0%,93%)" />
-                        <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(0,0%,55%)" }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 11, fill: "hsl(0,0%,55%)" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
-                        <Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} contentStyle={{ borderRadius: "12px", fontSize: "12px" }} />
-                        <Area type="monotone" dataKey="income" stroke="hsl(152,69%,41%)" fill="hsl(152,69%,41%)" fillOpacity={0.08} strokeWidth={2} />
-                        <Area type="monotone" dataKey="expense" stroke="hsl(0,72%,51%)" fill="hsl(0,72%,51%)" fillOpacity={0.08} strokeWidth={2} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="rounded-2xl border border-border/50 bg-background/80 backdrop-blur-sm p-4 sm:p-5 shadow-sm">
-                    <p className="text-sm font-medium mb-4">Category Distribution</p>
-                    <ResponsiveContainer width="100%" height={240}>
-                      <PieChart>
-                        <Pie data={categoryData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
-                          {categoryData.map((cat, i) => (
-                            <Cell key={i} fill={cat.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {activeTab === "chat" && null}
-          </AnimatePresence>
-        </div>
-      </main>
-
-      {/* ═══ Mobile Bottom Tab Bar ═══ */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-xl border-t border-border/40 safe-area-bottom">
-        <div className="flex items-center justify-around px-2 py-1.5">
-          {bottomTabs.map((tab) => {
-            const isActive = activeTab === tab.id;
+        <nav className="flex-1 px-4 space-y-2 mt-4">
+          {sidebarItems.map((item) => {
+            const isActive = activeTab === item.id;
             return (
               <button
-                key={tab.id}
-                onClick={() => handleTabClick(tab.id)}
-                className="flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-colors min-w-[56px]"
+                key={item.id}
+                onClick={() => handleTabClick(item.id)}
+                className={`w-full flex items-center gap-3 rounded-2xl transition-all duration-300 relative group overflow-hidden ${
+                  sidebarCollapsed ? "justify-center p-3" : "px-4 py-3.5"
+                } ${
+                  isActive
+                    ? "text-white shadow-md shadow-gray-900/10"
+                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-100/80"
+                }`}
               >
-                <span className={`text-lg transition-transform duration-200 ${isActive ? "scale-110" : ""}`}>
-                  {tab.icon}
-                </span>
-                <span className={`text-[10px] font-medium transition-colors ${
-                  isActive ? "text-foreground" : "text-muted-foreground"
-                }`}>
-                  {tab.label}
-                </span>
                 {isActive && (
                   <motion.div
-                    layoutId="bottomTabIndicator"
-                    className="absolute -top-px left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-foreground"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    layoutId="activeTab"
+                    className="absolute inset-0 bg-gray-900 rounded-2xl -z-10"
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   />
                 )}
+                <item.icon className={`w-5 h-5 z-10 ${isActive ? "text-white" : "group-hover:scale-110 transition-transform"}`} />
+                {!sidebarCollapsed && <span className="text-sm font-medium z-10">{item.label}</span>}
               </button>
             );
           })}
+        </nav>
+
+        <div className="p-4 border-t border-border/40 mt-auto">
+          <div className="flex items-center gap-3 p-2 rounded-2xl hover:bg-gray-100/80 transition-colors cursor-pointer">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-100 to-purple-100 flex items-center justify-center border border-white shadow-sm shrink-0">
+              <span className="text-gray-700 text-sm font-bold">JD</span>
+            </div>
+            {!sidebarCollapsed && (
+              <div className="overflow-hidden">
+                <p className="text-sm font-medium text-gray-900 truncate">John Doe</p>
+                <p className="text-xs text-gray-500 truncate">Pro Member</p>
+              </div>
+            )}
+          </div>
         </div>
-      </nav>
+      </aside>
+
+      {/* ═══ Main Content ═══ */}
+      <main className="flex-1 flex flex-col h-screen relative z-10">
+        {/* Header */}
+        <header className="h-20 flex items-center justify-between px-6 lg:px-10 bg-white/40 backdrop-blur-md border-b border-white/20 sticky top-0 z-30">
+          <div className="flex items-center gap-4">
+            <button className="lg:hidden p-2 text-gray-500 bg-white rounded-full shadow-sm">
+              <LayoutDashboard className="w-5 h-5" />
+            </button>
+            <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white/60 rounded-full border border-gray-100 shadow-sm">
+              <Search className="w-4 h-4 text-gray-400" />
+              <input type="text" placeholder="Search transactions..." className="bg-transparent text-sm outline-none w-48 placeholder:text-gray-400" />
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center border border-gray-100 shadow-sm relative text-gray-500 hover:text-gray-900 transition-colors">
+              <Bell className="w-5 h-5" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+            </button>
+            <div className="lg:hidden w-10 h-10 rounded-full bg-gradient-to-tr from-blue-100 to-purple-100 flex items-center justify-center border border-white shadow-sm shrink-0">
+              <span className="text-gray-700 text-sm font-bold">JD</span>
+            </div>
+          </div>
+        </header>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-6 lg:p-10 safe-area-bottom">
+          <AnimatePresence mode="wait">
+            {activeTab === "overview" && (
+              <motion.div 
+                key="overview" 
+                initial={{ opacity: 0, y: 20 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                exit={{ opacity: 0 }} 
+                transition={{ duration: 0.4 }}
+                className="max-w-6xl mx-auto space-y-8"
+              >
+                {/* Greeting & Weekly Score */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                  <div>
+                    <h1 className="font-display text-3xl font-bold text-gray-900 mb-2 tracking-tight">Good evening, John.</h1>
+                    <p className="text-gray-500 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-blue-500" />
+                      You saved 12% more this week. You're on a 5-week streak!
+                    </p>
+                  </div>
+                  <div className="glass-card bg-white/80 p-4 rounded-2xl flex items-center gap-4 shadow-sm border-white">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
+                      <TrendingUp className="w-6 h-6 text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Financial Score</p>
+                      <p className="text-2xl font-display font-bold text-gray-900">850 <span className="text-sm font-normal text-emerald-600">+12</span></p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* KPI Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { label: "Total Balance", value: "₹1,24,500", change: "+12.5%", color: "blue", icon: Wallet },
+                    { label: "Monthly Income", value: "₹55,000", change: "+8%", color: "emerald", icon: TrendingUp },
+                    { label: "Monthly Expenses", value: "₹27,940", change: "-5.2%", color: "purple", icon: CreditCard },
+                    { label: "Active Goals", value: "3 Goals", change: "On Track", color: "pink", icon: Target },
+                  ].map((kpi, i) => (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.1 }}
+                      key={kpi.label} 
+                      className="glass-card bg-white/60 p-6 rounded-[24px] border-white/50 hover:bg-white transition-colors cursor-pointer group"
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <div className={`w-10 h-10 rounded-xl bg-${kpi.color}-50 flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                          <kpi.icon className={`w-5 h-5 text-${kpi.color}-500`} />
+                        </div>
+                        <span className="text-xs font-medium px-2 py-1 bg-white rounded-full shadow-sm text-gray-600">{kpi.change}</span>
+                      </div>
+                      <p className="text-sm text-gray-500 font-medium mb-1">{kpi.label}</p>
+                      <p className="text-2xl font-display font-bold text-gray-900">{kpi.value}</p>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Main Charts Row */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Cashflow Chart */}
+                  <div className="lg:col-span-2 glass-card bg-white/70 p-6 sm:p-8 rounded-[32px] border-white/50">
+                    <div className="flex items-center justify-between mb-8">
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900">Cashflow Overview</h3>
+                        <p className="text-sm text-gray-500">Income vs Expenses over time</p>
+                      </div>
+                      <select className="bg-white border border-gray-100 text-sm rounded-xl px-3 py-1.5 outline-none shadow-sm cursor-pointer">
+                        <option>Last 6 Months</option>
+                        <option>This Year</option>
+                      </select>
+                    </div>
+                    <div className="h-[280px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={areaData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                            </linearGradient>
+                            <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                          <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} dy={10} />
+                          <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} tickFormatter={(val) => `₹${val/1000}k`} />
+                          <Tooltip 
+                            contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.1)' }}
+                            formatter={(value: number) => [`₹${value.toLocaleString()}`, '']}
+                          />
+                          <Area type="monotone" dataKey="income" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
+                          <Area type="monotone" dataKey="expense" stroke="#a855f7" strokeWidth={3} fillOpacity={1} fill="url(#colorExpense)" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* AI Smart Summaries & Category */}
+                  <div className="space-y-6 flex flex-col">
+                    <div className="glass-card bg-gradient-to-br from-gray-900 to-gray-800 p-6 sm:p-8 rounded-[32px] text-white flex-1 flex flex-col justify-between relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-[40px] pointer-events-none group-hover:scale-150 transition-transform duration-700" />
+                      <div>
+                        <div className="flex items-center gap-2 mb-4">
+                          <Sparkles className="w-5 h-5 text-blue-300" />
+                          <span className="font-medium text-blue-100">AI Intelligence</span>
+                        </div>
+                        <h3 className="text-xl font-display font-bold leading-snug mb-4">
+                          You have ₹8,500 sitting idle. Invest it in an index fund to reach your Europe Trip goal 2 months faster.
+                        </h3>
+                      </div>
+                      <button className="bg-white text-gray-900 px-5 py-2.5 rounded-xl text-sm font-medium w-max hover:bg-gray-50 transition-colors">
+                        Explore Strategy
+                      </button>
+                    </div>
+
+                    <div className="glass-card bg-white/70 p-6 sm:p-8 rounded-[32px] border-white/50">
+                      <h3 className="font-bold text-gray-900 mb-6">Spending Heatmap</h3>
+                      <div className="flex gap-6 items-center">
+                        <div className="w-24 h-24 shrink-0">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie data={categoryData} cx="50%" cy="50%" innerRadius={25} outerRadius={40} dataKey="value" strokeWidth={0} paddingAngle={5}>
+                                {categoryData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                              </Pie>
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                        <div className="flex-1 space-y-3">
+                          {categoryData.slice(0,3).map(cat => (
+                            <div key={cat.name} className="flex justify-between items-center text-sm">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
+                                <span className="text-gray-600">{cat.name}</span>
+                              </div>
+                              <span className="font-medium text-gray-900">{Math.round((cat.value / 24740)*100)}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Row: Goals & Transactions */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Gamified Goals */}
+                  <div className="glass-card bg-white/70 p-6 sm:p-8 rounded-[32px] border-white/50">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-lg font-bold text-gray-900">Active Missions</h3>
+                      <button className="text-sm font-medium text-blue-600 hover:text-blue-700">View All</button>
+                    </div>
+                    <div className="space-y-4">
+                      {goals.map((goal, i) => {
+                        const progress = (goal.saved / goal.target) * 100;
+                        return (
+                          <motion.div 
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.1 }}
+                            key={goal.name} 
+                            className="p-4 rounded-2xl bg-white border border-gray-100 shadow-sm flex flex-col gap-3 group hover:border-gray-200 transition-colors"
+                          >
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${goal.color} flex items-center justify-center text-lg shadow-sm group-hover:scale-110 transition-transform`}>
+                                  {goal.icon}
+                                </div>
+                                <div>
+                                  <h4 className="font-medium text-gray-900">{goal.name}</h4>
+                                  <p className="text-xs text-gray-500">₹{goal.saved.toLocaleString()} / ₹{goal.target.toLocaleString()}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-sm font-bold text-gray-900">{Math.round(progress)}%</span>
+                              </div>
+                            </div>
+                            <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                              <motion.div 
+                                initial={{ width: 0 }}
+                                whileInView={{ width: `${progress}%` }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
+                                className={`h-full bg-gradient-to-r ${goal.color}`}
+                              />
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Transactions */}
+                  <div className="glass-card bg-white/70 p-6 sm:p-8 rounded-[32px] border-white/50">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-lg font-bold text-gray-900">Recent Transactions</h3>
+                      <button className="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                        History <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="space-y-4">
+                      {transactions.map((tx, i) => (
+                        <motion.div 
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.1 }}
+                          key={tx.id} 
+                          className="flex items-center justify-between p-3 hover:bg-white rounded-2xl transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-xl border border-gray-100">
+                              {tx.icon}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">{tx.name}</p>
+                              <p className="text-xs text-gray-500">{tx.category} • {tx.date}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={`font-bold ${tx.amount > 0 ? 'text-emerald-600' : 'text-gray-900'}`}>
+                              {tx.amount > 0 ? '+' : ''}₹{Math.abs(tx.amount).toLocaleString()}
+                            </p>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab !== "overview" && (
+              <motion.div 
+                key="other" 
+                initial={{ opacity: 0, filter: "blur(10px)" }} 
+                animate={{ opacity: 1, filter: "blur(0px)" }} 
+                exit={{ opacity: 0 }} 
+                className="flex flex-col items-center justify-center h-[60vh] text-center"
+              >
+                <div className="w-20 h-20 bg-white rounded-3xl shadow-sm flex items-center justify-center mb-6">
+                  <Sparkles className="w-8 h-8 text-gray-400" />
+                </div>
+                <h2 className="text-2xl font-display font-bold text-gray-900 mb-2">Coming Soon</h2>
+                <p className="text-gray-500 max-w-sm">
+                  The {sidebarItems.find(i => i.id === activeTab)?.label} experience is being redesigned into a premium cinematic interface.
+                </p>
+                <button 
+                  onClick={() => setActiveTab("overview")}
+                  className="mt-8 px-6 py-3 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
+                >
+                  Return to Overview
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </main>
+      
+      {/* Mobile Bottom Navigation */}
+      <div className="lg:hidden fixed bottom-0 left-0 w-full bg-white/80 backdrop-blur-xl border-t border-border/40 z-40 safe-area-bottom px-6 py-2">
+        <nav className="flex justify-between items-center max-w-sm mx-auto">
+          {sidebarItems.map((item) => {
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleTabClick(item.id)}
+                className={`flex flex-col items-center gap-1 p-2 transition-all ${
+                  isActive ? "text-gray-900" : "text-gray-400 hover:text-gray-600"
+                }`}
+              >
+                <div className={`relative ${isActive ? "scale-110" : ""}`}>
+                  {isActive && <div className="absolute inset-0 bg-gray-100 rounded-full scale-150 -z-10" />}
+                  <item.icon className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] font-medium mt-1">{item.label}</span>
+              </button>
+            )
+          })}
+        </nav>
+      </div>
     </div>
   );
 };

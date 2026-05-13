@@ -39,14 +39,14 @@ const Coach = () => {
   const handleExit = () => navigate("/dashboard");
 
   return (
-    <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-[hsl(0,0%,98%)]">
+    <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-[#fafafa]">
       {/* Light immersive background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[hsl(240,40%,97%)] via-[hsl(0,0%,98%)] to-[hsl(220,30%,96%)]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#fafafa] via-blue-50/20 to-purple-50/20" />
       
       {/* Soft pastel blobs */}
-      <div className="absolute top-[10%] left-[10%] w-[400px] h-[400px] rounded-full bg-[hsl(262,83%,58%/0.06)] blur-[100px]" />
-      <div className="absolute bottom-[10%] right-[10%] w-[500px] h-[500px] rounded-full bg-[hsl(217,91%,60%/0.05)] blur-[120px]" />
-      <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[hsl(152,69%,41%/0.04)] blur-[100px]" />
+      <div className="absolute top-[10%] left-[10%] w-[500px] h-[500px] rounded-full bg-blue-100/30 blur-[100px] mix-blend-multiply" />
+      <div className="absolute bottom-[10%] right-[10%] w-[600px] h-[600px] rounded-full bg-purple-100/30 blur-[120px] mix-blend-multiply" />
+      <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-blue-50/30 blur-[100px] mix-blend-multiply" />
 
       {/* Transition overlay */}
       <TransitionOverlay
