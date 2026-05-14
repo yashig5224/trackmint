@@ -5,7 +5,6 @@ import TransitionOverlay from "@/components/ai/TransitionOverlay";
 import PersonaSelection from "@/components/ai/PersonaSelection";
 import MissionDashboard from "@/components/ai/MissionDashboard";
 import type { Persona } from "@/components/ai/PersonaSelection";
-import { coachBg } from "@/assets/personas";
 
 type Phase = "transition" | "persona" | "mission";
 
