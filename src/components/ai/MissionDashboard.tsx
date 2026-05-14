@@ -5,6 +5,7 @@ import {
 } from "recharts";
 import { Mic, Send, LogOut, Settings, Sparkles, TrendingUp, AlertTriangle, Target } from "lucide-react";
 import type { Persona } from "./PersonaSelection";
+import { lumoAvatar, coachBg } from "@/assets/personas";
 
 interface Message {
   id: number;
@@ -105,7 +106,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
     {
       id: 0,
       role: "ai",
-      text: `Welcome to your Financial Mission! 👋 I'm your personalized ${persona.name} Coach. I've been analyzing your recent transactions. What's our focus for today?`,
+      text: `Hey, I'm Lumo AI ✨ — your ${persona.name} coach. I've scanned your recent transactions and I'm ready to help. What should we tackle first?`,
     },
   ]);
   const [input, setInput] = useState("");
@@ -156,10 +157,12 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
       transition={{ duration: 0.4 }}
       className="flex flex-col h-[100dvh] w-screen relative overflow-hidden bg-[#fafafa]"
     >
-      {/* Cinematic Background */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50/60 via-transparent to-transparent pointer-events-none" />
-      <div className="absolute top-[20%] left-[-10%] w-[800px] h-[800px] rounded-full bg-purple-50/40 blur-[120px] pointer-events-none mix-blend-multiply" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-blue-50/40 blur-[100px] pointer-events-none mix-blend-multiply" />
+      {/* Uploaded immersive background */}
+      <div className="absolute inset-0 -z-0 pointer-events-none">
+        <img src={coachBg} alt="" className="w-full h-full object-cover" style={{ objectPosition: "center 30%" }} />
+        <div className="absolute inset-0 bg-white/85 backdrop-blur-sm" />
+        <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-white/40 to-white/90" />
+      </div>
 
       {/* Floating particles */}
       {Array.from({ length: 15 }).map((_, i) => (
@@ -251,9 +254,14 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
                   <div className="flex gap-4 sm:gap-6 max-w-[95%] sm:max-w-[85%]">
                     {/* AI Avatar */}
                     <div className="shrink-0 pt-2">
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center text-2xl sm:text-3xl z-10 relative">
-                        {persona.emoji}
-                      </div>
+                      <motion.div
+                        animate={{ y: [0, -4, 0] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden shadow-md ring-2 ring-white relative"
+                        style={{ background: `linear-gradient(135deg, hsl(${persona.accentHsl} / 0.15), hsl(${persona.accentHsl} / 0.05))` }}
+                      >
+                        <img src={lumoAvatar} alt="Lumo AI" className="w-full h-full object-cover" />
+                      </motion.div>
                     </div>
                     
                     {/* AI Message Container */}
@@ -347,9 +355,9 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
                 exit={{ opacity: 0, scale: 0.95 }}
                 className="flex gap-4 sm:gap-6 max-w-[80%]"
               >
-                <div className="shrink-0 pt-2 opacity-50">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white border border-gray-100 flex items-center justify-center text-2xl sm:text-3xl grayscale">
-                    {persona.emoji}
+                <div className="shrink-0 pt-2">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden shadow-md ring-2 ring-white">
+                    <img src={lumoAvatar} alt="Lumo AI" className="w-full h-full object-cover" />
                   </div>
                 </div>
                 <div className="p-6 rounded-[24px] rounded-tl-xl bg-white/60 border border-white backdrop-blur-xl flex items-center gap-2 h-[72px]">

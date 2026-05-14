@@ -5,6 +5,7 @@ import TransitionOverlay from "@/components/ai/TransitionOverlay";
 import PersonaSelection from "@/components/ai/PersonaSelection";
 import MissionDashboard from "@/components/ai/MissionDashboard";
 import type { Persona } from "@/components/ai/PersonaSelection";
+import { coachBg } from "@/assets/personas";
 
 type Phase = "transition" | "persona" | "mission";
 
@@ -40,13 +41,12 @@ const Coach = () => {
 
   return (
     <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-[#fafafa]">
-      {/* Light immersive background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#fafafa] via-blue-50/20 to-purple-50/20" />
-      
-      {/* Soft pastel blobs */}
-      <div className="absolute top-[10%] left-[10%] w-[500px] h-[500px] rounded-full bg-blue-100/30 blur-[100px] mix-blend-multiply" />
-      <div className="absolute bottom-[10%] right-[10%] w-[600px] h-[600px] rounded-full bg-purple-100/30 blur-[120px] mix-blend-multiply" />
-      <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-blue-50/30 blur-[100px] mix-blend-multiply" />
+      {/* Uploaded immersive background with light overlay */}
+      <div className="absolute inset-0">
+        <img src={coachBg} alt="" className="w-full h-full object-cover" style={{ objectPosition: "center 30%" }} />
+        <div className="absolute inset-0 bg-white/75 backdrop-blur-[2px]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-white/50 via-transparent to-white/80" />
+      </div>
 
       {/* Transition overlay */}
       <TransitionOverlay

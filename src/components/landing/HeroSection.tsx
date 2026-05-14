@@ -89,13 +89,13 @@ const HeroSection = () => {
               to="/dashboard"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-foreground text-background px-8 py-4 rounded-full text-base font-medium hover:bg-foreground/90 hover:scale-[1.02] transition-all duration-300 shadow-lg shadow-foreground/10"
             >
-              Start Your Journey
+              Try Demo
             </Link>
             <Link
-              to="/dashboard"
+              to="/login"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-background text-foreground border border-border/60 px-8 py-4 rounded-full text-base font-medium hover:bg-muted/50 hover:border-border transition-all duration-300"
             >
-              Watch Demo
+              Login / Sign Up
             </Link>
           </motion.div>
 
