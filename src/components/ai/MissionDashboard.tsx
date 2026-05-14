@@ -106,7 +106,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
     {
       id: 0,
       role: "ai",
-      text: `Welcome to your Financial Mission! 👋 I'm your personalized ${persona.name} Coach. I've been analyzing your recent transactions. What's our focus for today?`,
+      text: `Hey, I'm Lumo AI ✨ — your ${persona.name} coach. I've scanned your recent transactions and I'm ready to help. What should we tackle first?`,
     },
   ]);
   const [input, setInput] = useState("");
