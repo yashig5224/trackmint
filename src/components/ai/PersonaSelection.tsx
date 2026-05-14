@@ -16,17 +16,19 @@ export interface Persona {
 const personas: Persona[] = [
   { id: "student",    name: "Student Saver",      emoji: "🎒", tagline: "Learn as you earn",       description: "Master budgeting on a tight schedule. Great for beginners.",            accentHsl: "217 91% 60%", level: 1 },
   { id: "salary",     name: "Salary Warrior",     emoji: "💼", tagline: "Optimize every paycheck", description: "Maximize your monthly income with smart allocations.",                  accentHsl: "220 70% 40%", level: 3 },
-  { id: "investor",   name: "Smart Investor",     emoji: "📈", tagline: "Make money work for you", description: "AI insights on portfolio, risk, and long-term growth.",                 accentHsl: "152 69% 41%", level: 5 },
-  { id: "hustler",    name: "Side Hustler",       emoji: "🚀", tagline: "Multiple income streams", description: "Manage freelance, biz, and main income seamlessly.",                    accentHsl: "262 83% 58%", level: 4 },
-  { id: "minimalist", name: "Minimalist Planner", emoji: "🪴", tagline: "Less is more",            description: "Clean, essential tracking. Focus on what truly matters.",               accentHsl: "30 25% 55%",  level: 2 },
-  { id: "luxury",     name: "Luxury Spender",     emoji: "✨", tagline: "Live well, save well",    description: "Balance premium lifestyle choices with smart wealth building.",         accentHsl: "45 80% 45%",  level: 4 },
-  { id: "crypto",     name: "Crypto Curious",     emoji: "🪙", tagline: "Explore web3 wealth",     description: "Navigate crypto, NFTs, and decentralized finance with confidence.",     accentHsl: "280 80% 60%", level: 3 },
-  { id: "crusher",    name: "Goal Crusher",       emoji: "🎯", tagline: "Laser-focused results",   description: "Aggressive savings strategies to hit major milestones fast.",           accentHsl: "20 92% 55%",  level: 3 },
+  { id: "investor",   name: "Smart Investor",     emoji: "📈", tagline: "Make money work for you", description: "AI insights on portfolio, risk and long-term growth.",                  accentHsl: "152 69% 41%", level: 5 },
+  { id: "hustler",    name: "Side Hustler",       emoji: "🚀", tagline: "Multiple income streams", description: "Manage freelance, biz and main income seamlessly.",                     accentHsl: "262 83% 58%", level: 4 },
+  { id: "minimalist", name: "Minimalist Planner", emoji: "🪴", tagline: "Less is more",            description: "Clean essential tracking. Focus on what truly matters.",                accentHsl: "30 25% 55%",  level: 2 },
+  { id: "family",     name: "Family Guardian",    emoji: "🏡", tagline: "Protect what matters",    description: "Plan for your loved ones with safety nets and shared goals.",          accentHsl: "20 92% 55%",  level: 3 },
+  { id: "luxury",     name: "Luxury Dreamer",     emoji: "✨", tagline: "Live well, save well",    description: "Balance premium lifestyle with smart wealth building.",                 accentHsl: "45 80% 45%",  level: 4 },
+  { id: "crypto",     name: "Crypto Explorer",    emoji: "🪙", tagline: "Explore web3 wealth",     description: "Navigate crypto, NFTs and DeFi with confidence.",                       accentHsl: "280 80% 60%", level: 3 },
 ];
 
 interface PersonaSelectionProps {
   onSelect: (persona: Persona) => void;
 }
+
+const CURRENCY_GLYPHS = ["₹", "$", "€", "¥", "£", "₿"];
 
 const PersonaSelection = ({ onSelect }: PersonaSelectionProps) => {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -35,12 +37,11 @@ const PersonaSelection = ({ onSelect }: PersonaSelectionProps) => {
 
   const handleSelect = (persona: Persona) => {
     setSelectedId(persona.id);
-    setTimeout(() => onSelect(persona), 800);
+    setTimeout(() => onSelect(persona), 850);
   };
 
   const scroll = (dir: 1 | -1) => {
-    if (!trackRef.current) return;
-    trackRef.current.scrollBy({ left: dir * 320, behavior: "smooth" });
+    trackRef.current?.scrollBy({ left: dir * 320, behavior: "smooth" });
   };
 
   return (
@@ -51,7 +52,7 @@ const PersonaSelection = ({ onSelect }: PersonaSelectionProps) => {
       transition={{ duration: 0.6 }}
       className="min-h-screen flex flex-col items-center justify-center py-12 px-4 relative overflow-hidden"
     >
-      {/* Uploaded background image */}
+      {/* Sharp, vibrant background — NO blur */}
       <div className="absolute inset-0 -z-10">
         <img
           src={coachBg}
@@ -59,21 +60,67 @@ const PersonaSelection = ({ onSelect }: PersonaSelectionProps) => {
           className="w-full h-full object-cover"
           style={{ objectPosition: "center 30%" }}
         />
-        {/* Soft white overlay for light-mode readability */}
-        <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-transparent to-white/80" />
+        {/* Soft top/bottom vignette so headline + cards stay readable, but image stays sharp */}
+        <div className="absolute inset-0 bg-gradient-to-b from-white/55 via-white/15 to-white/75" />
+        <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-white/70 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-white/85 to-transparent" />
       </div>
 
-      {/* Floating particles */}
-      {Array.from({ length: 12 }).map((_, i) => (
+      {/* Glowing money symbols floating */}
+      {Array.from({ length: 14 }).map((_, i) => {
+        const glyph = CURRENCY_GLYPHS[i % CURRENCY_GLYPHS.length];
+        const left = 4 + (i * 7) % 92;
+        const top = 8 + (i * 11) % 80;
+        const size = 18 + (i % 3) * 8;
+        const colors = ["#7c3aed", "#3b82f6", "#10b981", "#f59e0b", "#ec4899"];
+        const c = colors[i % colors.length];
+        return (
+          <motion.span
+            key={`coin-${i}`}
+            aria-hidden
+            initial={{ opacity: 0, y: 20 }}
+            animate={{
+              y: [0, -22, 0],
+              opacity: [0.55, 0.95, 0.55],
+              rotate: [0, 6, -6, 0],
+            }}
+            transition={{ duration: 5 + (i % 4), repeat: Infinity, ease: "easeInOut", delay: i * 0.25 }}
+            className="absolute font-display font-bold pointer-events-none select-none"
+            style={{
+              left: `${left}%`,
+              top: `${top}%`,
+              fontSize: size,
+              color: c,
+              textShadow: `0 0 18px ${c}88, 0 2px 4px rgba(0,0,0,0.06)`,
+            }}
+          >
+            {glyph}
+          </motion.span>
+        );
+      })}
+
+      {/* Sparkle particles */}
+      {Array.from({ length: 18 }).map((_, i) => (
         <motion.div
-          key={i}
-          animate={{ y: [0, -40, 0], opacity: [0.2, 0.6, 0.2] }}
-          transition={{ duration: 6 + i, repeat: Infinity, ease: "easeInOut", delay: i * 0.3 }}
-          className="absolute w-2 h-2 rounded-full bg-white/80 shadow-[0_0_12px_rgba(99,102,241,0.6)] pointer-events-none"
-          style={{ top: `${10 + Math.random() * 80}%`, left: `${5 + Math.random() * 90}%` }}
+          key={`spark-${i}`}
+          animate={{ y: [0, -30, 0], opacity: [0.2, 0.9, 0.2], scale: [0.6, 1.1, 0.6] }}
+          transition={{ duration: 4 + (i % 5), repeat: Infinity, ease: "easeInOut", delay: i * 0.2 }}
+          className="absolute w-1.5 h-1.5 rounded-full bg-white pointer-events-none"
+          style={{
+            top: `${(i * 13) % 90 + 5}%`,
+            left: `${(i * 17) % 92 + 4}%`,
+            boxShadow: "0 0 10px rgba(255,255,255,0.9), 0 0 22px rgba(167,139,250,0.6)",
+          }}
         />
       ))}
+
+      {/* Soft light ray */}
+      <motion.div
+        animate={{ opacity: [0.25, 0.5, 0.25] }}
+        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute -top-32 left-1/2 -translate-x-1/2 w-[60vw] h-[80vh] pointer-events-none"
+        style={{ background: "radial-gradient(ellipse at top, rgba(255,255,255,0.6), transparent 60%)" }}
+      />
 
       <div className="relative z-10 w-full max-w-7xl">
         <motion.div
@@ -82,17 +129,15 @@ const PersonaSelection = ({ onSelect }: PersonaSelectionProps) => {
           transition={{ duration: 0.5 }}
           className="text-center mb-10 sm:mb-14"
         >
-          <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight mb-4 text-gray-900">
+          <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight mb-4 text-gray-900 drop-shadow-sm">
             Choose Your Financial Persona
           </h1>
-          <p className="text-gray-600 text-base sm:text-xl max-w-xl mx-auto font-medium">
-            Lumo AI personalizes your journey based on your archetype.
+          <p className="text-gray-700 text-base sm:text-xl max-w-2xl mx-auto font-medium">
+            Lumo AI personalizes your journey based on your financial archetype.
           </p>
         </motion.div>
 
-        {/* Carousel container */}
         <div className="relative">
-          {/* Scroll buttons (desktop) */}
           <button
             onClick={() => scroll(-1)}
             className="hidden md:flex absolute -left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 items-center justify-center rounded-full bg-white shadow-lg border border-gray-100 hover:scale-110 transition-transform"
@@ -108,11 +153,10 @@ const PersonaSelection = ({ onSelect }: PersonaSelectionProps) => {
             <ChevronRight className="w-5 h-5 text-gray-700" />
           </button>
 
-          {/* Horizontal scroll track */}
           <div
             ref={trackRef}
             className="flex gap-5 sm:gap-6 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-6 px-2 -mx-2 scroll-smooth"
-            style={{ WebkitOverflowScrolling: "touch" }}
+            style={{ WebkitOverflowScrolling: "touch", perspective: "1200px" }}
           >
             {personas.map((persona, i) => {
               const isHovered = hoveredId === persona.id;
@@ -127,88 +171,106 @@ const PersonaSelection = ({ onSelect }: PersonaSelectionProps) => {
                   animate={{
                     opacity: isOther ? 0 : 1,
                     y: isOther ? 20 : 0,
-                    scale: isSelected ? 1.4 : 1,
+                    scale: isSelected ? 1.45 : 1,
+                    rotateY: isHovered && !isSelected ? -8 : 0,
+                    rotateX: isHovered && !isSelected ? 4 : 0,
                     zIndex: isSelected ? 50 : 1,
                   }}
                   transition={{
                     delay: selectedId ? 0 : 0.05 + i * 0.05,
-                    duration: selectedId ? 0.6 : 0.5,
+                    duration: selectedId ? 0.7 : 0.5,
                     type: "spring",
-                    stiffness: selectedId ? 100 : 250,
+                    stiffness: selectedId ? 110 : 220,
                     damping: 20,
                   }}
-                  whileHover={!selectedId ? { y: -10 } : {}}
+                  whileHover={!selectedId ? { y: -12 } : {}}
                   onHoverStart={() => setHoveredId(persona.id)}
                   onHoverEnd={() => setHoveredId(null)}
                   onClick={() => !selectedId && handleSelect(persona)}
-                  className={`relative shrink-0 snap-center text-left w-[260px] sm:w-[280px] rounded-[28px] border bg-white/80 backdrop-blur-xl shadow-lg cursor-pointer transition-colors duration-300 overflow-hidden ${
-                    isSelected
-                      ? "border-transparent shadow-2xl bg-white"
-                      : isHovered
-                      ? "border-white shadow-[0_20px_50px_-15px_rgba(0,0,0,0.18)] bg-white"
-                      : "border-white/60"
-                  }`}
-                  style={{
-                    boxShadow: isHovered
-                      ? `0 25px 50px -15px hsl(${persona.accentHsl} / 0.25)`
-                      : undefined,
-                  }}
+                  className={`relative shrink-0 snap-center text-left w-[260px] sm:w-[280px] rounded-[28px] cursor-pointer overflow-visible`}
+                  style={{ transformStyle: "preserve-3d" }}
                 >
-                  {/* Persona image — cell from grid */}
-                  <div className="relative h-[260px] w-full overflow-hidden bg-gradient-to-b from-white to-gray-50">
+                  {/* Animated gradient border ring */}
+                  <motion.div
+                    aria-hidden
+                    animate={isHovered || isSelected ? { opacity: 1 } : { opacity: 0.55 }}
+                    className="absolute -inset-[2px] rounded-[30px] pointer-events-none"
+                    style={{
+                      background: `conic-gradient(from 0deg, hsl(${persona.accentHsl}), white, hsl(${persona.accentHsl}))`,
+                      filter: "blur(0.5px)",
+                    }}
+                  >
                     <motion.div
-                      animate={isHovered && !selectedId ? { scale: 1.06 } : { scale: 1 }}
-                      transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                      className="absolute inset-0"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                      className="w-full h-full rounded-[30px]"
                       style={{
-                        backgroundImage: `url(${personaGrid})`,
-                        backgroundSize: "400% 200%",
-                        backgroundPosition: `${cell.x} ${cell.y}`,
-                        backgroundRepeat: "no-repeat",
+                        background: `conic-gradient(from 0deg, transparent 0%, hsl(${persona.accentHsl} / 0.9) 25%, transparent 50%, hsl(${persona.accentHsl} / 0.6) 75%, transparent 100%)`,
                       }}
                     />
-                    {/* Soft accent glow */}
-                    <div
-                      className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-30"
-                      style={{
-                        background: `radial-gradient(circle at 50% 90%, hsl(${persona.accentHsl} / 0.25), transparent 60%)`,
-                      }}
-                    />
-                    {/* Level badge */}
-                    <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-md shadow-sm border border-white text-[11px] font-bold text-gray-900 flex items-center gap-1">
-                      <span style={{ color: `hsl(${persona.accentHsl})` }}>★</span>
-                      Lvl {persona.level}
-                    </div>
-                    {isSelected && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="absolute top-3 right-3 w-7 h-7 rounded-full bg-gray-900 flex items-center justify-center text-white text-xs font-bold shadow-md"
-                      >
-                        ✓
-                      </motion.div>
-                    )}
-                  </div>
+                  </motion.div>
 
-                  {/* Text */}
-                  <div className="p-5 pt-4">
-                    <h3 className="font-display text-lg font-bold text-gray-900 leading-tight">
-                      {persona.name}
-                    </h3>
-                    <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-widest">
-                      {persona.tagline}
-                    </p>
-                    <p className="text-sm text-gray-500 leading-relaxed mt-3 font-medium">
-                      {persona.description}
-                    </p>
+                  {/* Card body */}
+                  <div
+                    className="relative rounded-[28px] bg-white/85 backdrop-blur-md shadow-xl overflow-hidden"
+                    style={{
+                      boxShadow: isHovered || isSelected
+                        ? `0 30px 60px -20px hsl(${persona.accentHsl} / 0.45)`
+                        : "0 12px 35px -15px rgba(0,0,0,0.18)",
+                    }}
+                  >
+                    {/* Persona image cell */}
+                    <div className="relative h-[260px] w-full overflow-hidden bg-gradient-to-b from-white to-gray-50">
+                      <motion.div
+                        animate={isHovered && !isSelected ? { scale: 1.07 } : { scale: 1 }}
+                        transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                        className="absolute inset-0"
+                        style={{
+                          backgroundImage: `url(${personaGrid})`,
+                          backgroundSize: "400% 200%",
+                          backgroundPosition: `${cell.x} ${cell.y}`,
+                          backgroundRepeat: "no-repeat",
+                        }}
+                      />
+                      <div
+                        className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-30"
+                        style={{
+                          background: `radial-gradient(circle at 50% 90%, hsl(${persona.accentHsl} / 0.30), transparent 60%)`,
+                        }}
+                      />
+                      <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-md shadow-sm border border-white text-[11px] font-bold text-gray-900 flex items-center gap-1">
+                        <span style={{ color: `hsl(${persona.accentHsl})` }}>★</span>
+                        Lvl {persona.level}
+                      </div>
+                      {isSelected && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="absolute top-3 right-3 w-7 h-7 rounded-full bg-gray-900 flex items-center justify-center text-white text-xs font-bold shadow-md"
+                        >
+                          ✓
+                        </motion.div>
+                      )}
+                    </div>
+
+                    <div className="p-5 pt-4">
+                      <h3 className="font-display text-lg font-bold text-gray-900 leading-tight">
+                        {persona.name}
+                      </h3>
+                      <p className="text-[10px] font-bold mt-1 uppercase tracking-widest" style={{ color: `hsl(${persona.accentHsl})` }}>
+                        {persona.tagline}
+                      </p>
+                      <p className="text-sm text-gray-500 leading-relaxed mt-3 font-medium">
+                        {persona.description}
+                      </p>
+                    </div>
                   </div>
                 </motion.button>
               );
             })}
           </div>
 
-          {/* Scroll hint (mobile) */}
-          <p className="md:hidden text-center text-xs text-gray-500 mt-4 font-medium">
+          <p className="md:hidden text-center text-xs text-gray-600 mt-4 font-medium">
             ← swipe to explore →
           </p>
         </div>
