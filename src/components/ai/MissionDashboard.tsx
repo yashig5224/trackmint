@@ -182,7 +182,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
         <motion.div
           key={`bg-particle-${i}`}
           animate={{ 
-            y: ["100vh", "-10vh"],
+            y: ["100%", "-10%"],
             x: [0, Math.sin(i) * 50, 0],
             opacity: [0, 0.4, 0],
             rotate: [0, 360]
