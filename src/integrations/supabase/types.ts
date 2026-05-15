@@ -14,7 +14,207 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ai_history: {
+        Row: {
+          ai_response: string | null
+          created_at: string
+          id: string
+          message: string
+          persona: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_response?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          persona?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_response?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          persona?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      budgets: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          month: string
+          monthly_limit: number
+          spent_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          month?: string
+          monthly_limit: number
+          spent_amount?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          month?: string
+          monthly_limit?: number
+          spent_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      goals: {
+        Row: {
+          category: string | null
+          created_at: string
+          current_amount: number
+          deadline: string | null
+          goal_name: string
+          id: string
+          target_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          current_amount?: number
+          deadline?: string | null
+          goal_name: string
+          id?: string
+          target_amount: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          current_amount?: number
+          deadline?: string | null
+          goal_name?: string
+          id?: string
+          target_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          country: string | null
+          created_at: string
+          currency: string | null
+          email: string | null
+          financial_score: number | null
+          full_name: string | null
+          id: string
+          level: number | null
+          monthly_income: number | null
+          onboarding_completed: boolean | null
+          onboarding_data: Json | null
+          primary_goal: string | null
+          selected_persona: string | null
+          streak: number | null
+          updated_at: string
+          xp: number | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          country?: string | null
+          created_at?: string
+          currency?: string | null
+          email?: string | null
+          financial_score?: number | null
+          full_name?: string | null
+          id: string
+          level?: number | null
+          monthly_income?: number | null
+          onboarding_completed?: boolean | null
+          onboarding_data?: Json | null
+          primary_goal?: string | null
+          selected_persona?: string | null
+          streak?: number | null
+          updated_at?: string
+          xp?: number | null
+        }
+        Update: {
+          avatar_url?: string | null
+          country?: string | null
+          created_at?: string
+          currency?: string | null
+          email?: string | null
+          financial_score?: number | null
+          full_name?: string | null
+          id?: string
+          level?: number | null
+          monthly_income?: number | null
+          onboarding_completed?: boolean | null
+          onboarding_data?: Json | null
+          primary_goal?: string | null
+          selected_persona?: string | null
+          streak?: number | null
+          updated_at?: string
+          xp?: number | null
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          category: string | null
+          created_at: string
+          id: string
+          note: string | null
+          payment_method: string | null
+          recurring: boolean | null
+          title: string
+          transaction_date: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          payment_method?: string | null
+          recurring?: boolean | null
+          title: string
+          transaction_date?: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          payment_method?: string | null
+          recurring?: boolean | null
+          title?: string
+          transaction_date?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
