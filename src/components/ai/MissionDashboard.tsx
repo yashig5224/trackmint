@@ -387,7 +387,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
               </motion.div>
             )}
           </AnimatePresence>
-          <div ref={messagesEndRef} className="h-4" />
+          <div className="h-2" />
         </div>
       </div>
 
