@@ -252,7 +252,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
       </motion.div>
 
       {/* ═══ Main Chat Area ═══ */}
-      <div className="flex-1 overflow-y-auto relative z-10 scrollbar-none pb-56">
+      <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto relative z-10 scrollbar-none pt-2 pb-6">
         <div className="max-w-4xl mx-auto px-4 sm:px-8 space-y-10">
           <AnimatePresence mode="popLayout">
             {messages.map((msg) => (
