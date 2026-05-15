@@ -168,7 +168,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
-      className="flex flex-col h-[100dvh] w-screen relative overflow-hidden bg-[#fafafa]"
+      className="flex flex-col h-full w-full absolute inset-0 overflow-hidden bg-[#fafafa]"
     >
       {/* Uploaded immersive background */}
       <div className="absolute inset-0 -z-0 pointer-events-none">
