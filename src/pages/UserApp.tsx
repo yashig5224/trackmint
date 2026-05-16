@@ -12,6 +12,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { getCategoryIcon, NAV_ICONS } from "@/assets/icons";
 
 type Tab = "overview" | "transactions" | "goals" | "reports" | "settings";
 
@@ -131,17 +132,21 @@ const UserApp = () => {
         </Link>
         <nav className="space-y-1 flex-1">
           {([
-            { id: "overview", label: "Overview", Icon: Home },
-            { id: "transactions", label: "Transactions", Icon: Receipt },
-            { id: "goals", label: "Goals", Icon: Target },
-            { id: "reports", label: "Reports", Icon: BarChart3 },
-            { id: "settings", label: "Settings", Icon: Settings },
-          ] as const).map(({ id, label, Icon }) => (
-            <button key={id} onClick={() => setTab(id)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${tab === id ? "bg-gray-900 text-white shadow-md" : "text-gray-600 hover:bg-gray-100"}`}>
-              <Icon className="w-4 h-4" /> {label}
+            { id: "overview", label: "Overview", img: NAV_ICONS.overview },
+            { id: "transactions", label: "Transactions", img: NAV_ICONS.transactions },
+            { id: "goals", label: "Goals", img: NAV_ICONS.goals },
+            { id: "reports", label: "Reports", img: NAV_ICONS.reports },
+          ] as const).map(({ id, label, img }) => (
+            <button key={id} onClick={() => setTab(id as Tab)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-medium transition-all relative ${tab === id ? "bg-gradient-to-r from-purple-100 via-blue-50 to-cyan-50 text-gray-900 shadow-sm" : "text-gray-600 hover:bg-gray-50"}`}>
+              <img src={img} alt="" className="w-9 h-9 object-contain shrink-0" />
+              <span>{label}</span>
+              {tab === id && <span className="absolute right-3 w-1.5 h-1.5 rounded-full bg-cyan-500" />}
             </button>
           ))}
-          <Link to="/coach" className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 mt-4 border border-dashed border-gray-200">
+          <button onClick={() => setTab("settings")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all ${tab === "settings" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-50"}`}>
+            <Settings className="w-4 h-4" /> Settings
+          </button>
+          <Link to="/coach" className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-gray-600 hover:bg-gradient-to-r hover:from-purple-50 hover:to-cyan-50 mt-4 border border-dashed border-purple-200">
             <Brain className="w-4 h-4 text-blue-500" /> Lumo AI Coach
           </Link>
         </nav>
@@ -218,17 +223,20 @@ const UserApp = () => {
       {/* Mobile bottom nav */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-xl border-t border-gray-100 px-2 py-2 flex items-center justify-around">
         {([
-          { id: "overview", Icon: Home },
-          { id: "transactions", Icon: Receipt },
-          { id: "goals", Icon: Target },
-          { id: "reports", Icon: BarChart3 },
-          { id: "settings", Icon: Settings },
-        ] as const).map(({ id, Icon }) => (
-          <button key={id} onClick={() => setTab(id)} className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl ${tab === id ? "text-gray-900" : "text-gray-400"}`}>
-            <Icon className="w-5 h-5" />
-            <span className="text-[10px] capitalize font-semibold">{id}</span>
+          { id: "overview", img: NAV_ICONS.overview },
+          { id: "transactions", img: NAV_ICONS.transactions },
+          { id: "goals", img: NAV_ICONS.goals },
+          { id: "reports", img: NAV_ICONS.reports },
+        ] as const).map(({ id, img }) => (
+          <button key={id} onClick={() => setTab(id as Tab)} className={`flex-1 flex flex-col items-center gap-0.5 py-1 rounded-xl transition-all ${tab === id ? "bg-gradient-to-b from-purple-50 to-cyan-50" : ""}`}>
+            <img src={img} alt="" className={`w-9 h-9 object-contain ${tab === id ? "" : "opacity-60"}`} />
+            <span className={`text-[10px] capitalize font-semibold ${tab === id ? "text-gray-900" : "text-gray-400"}`}>{id}</span>
           </button>
         ))}
+        <button onClick={() => setTab("settings")} className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl ${tab === "settings" ? "text-gray-900" : "text-gray-400"}`}>
+          <Settings className="w-5 h-5" />
+          <span className="text-[10px] font-semibold">Settings</span>
+        </button>
       </nav>
 
       <AnimatePresence>
@@ -365,9 +373,9 @@ const Transactions = ({ transactions, onAdd, onDelete, currency }: any) => (
     ) : (
       <div className="space-y-2">
         {transactions.map((t: Tx) => (
-          <motion.div key={t.id} layout className="glass-card bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-4 group">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold" style={{ background: (CATEGORY_COLORS[t.category || "Other"] || "#94a3b8") + "22", color: CATEGORY_COLORS[t.category || "Other"] || "#94a3b8" }}>
-              {(t.category || "O").charAt(0)}
+          <motion.div key={t.id} layout className="glass-card bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-4 group hover:shadow-md transition-shadow">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-white to-gray-50 border border-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
+              <img src={getCategoryIcon(t.category)} alt="" className="w-10 h-10 object-contain" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-gray-900 truncate">{t.title}</p>
