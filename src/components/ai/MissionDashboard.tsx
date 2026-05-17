@@ -353,14 +353,13 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
       {/* ═══ Main Chat Area ═══ */}
       <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto relative z-10 scrollbar-none pt-2 pb-6">
         <div className="max-w-4xl mx-auto px-4 sm:px-8 space-y-10">
-          <AnimatePresence mode="popLayout">
+          <AnimatePresence initial={false}>
             {messages.map((msg) => (
               <motion.div
                 key={msg.id}
-                initial={{ opacity: 0, y: 20, filter: "blur(5px)" }}
-                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                transition={{ duration: 0.5, type: "spring", stiffness: 200, damping: 20 }}
-                layout
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
                 className={`flex w-full ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 {msg.role === "ai" ? (
