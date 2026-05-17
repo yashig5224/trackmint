@@ -235,10 +235,11 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
     setMessages((prev) => [...prev, userMsg]);
     setIsTyping(true);
 
-    const response = aiResponses[text] || {
-      text: `I'm analyzing your request for "${text}" based on your ${persona.name} profile...`,
+    const response: Reply = findReply(text, persona.id) ?? {
+      text: `Got it — let me think about "${text}" through your ${persona.name} lens. Here's a quick read based on the patterns I'm seeing in your activity.`,
       insights: [
-        { label: "Processing", value: "Insights", change: "Gathering data", positive: true },
+        { label: "Confidence", value: "High", change: "Pattern match", positive: true },
+        { label: "Persona", value: persona.name, change: "Personalized", positive: true },
       ],
     };
 
