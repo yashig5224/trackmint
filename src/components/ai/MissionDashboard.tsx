@@ -231,29 +231,52 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
 
   useEffect(scrollToBottom, [messages, isTyping]);
 
-  const sendMessage = (text: string) => {
+  const sendMessage = async (text: string) => {
     const userMsg: Message = { id: nextId.current++, role: "user", text };
+    const history = [...messages, userMsg];
     setMessages((prev) => [...prev, userMsg]);
     setIsTyping(true);
 
-    const response: Reply = findReply(text, persona.id) ?? {
-      text: `Got it — let me think about "${text}" through your ${persona.name} lens. Here's a quick read based on the patterns I'm seeing in your activity.`,
-      insights: [
-        { label: "Confidence", value: "High", change: "Pattern match", positive: true },
-        { label: "Persona", value: persona.name, change: "Personalized", positive: true },
-      ],
-    };
+    // Fallback insights from keyword library (used alongside real AI text)
+    const libReply = findReply(text, persona.id);
 
-    setTimeout(() => {
-      setIsTyping(false);
+    try {
+      const { data, error } = await supabase.functions.invoke("lumo-chat", {
+        body: {
+          message: text,
+          persona: { id: persona.id, name: persona.name },
+          history: history.slice(-8).map((m) => ({ role: m.role, text: m.text })),
+        },
+      });
+
+      let aiText: string;
+      if (error || !data?.text) {
+        // Fall back to local library response if AI gateway fails
+        aiText = libReply?.text
+          ?? `Here's my take on "${text}" — let's break it down through your ${persona.name} lens and find one concrete next step.`;
+      } else {
+        aiText = data.text;
+      }
+
       const aiMsg: Message = {
         id: nextId.current++,
         role: "ai",
-        text: response.text,
-        insights: response.insights,
+        text: aiText,
+        insights: libReply?.insights,
       };
       setMessages((prev) => [...prev, aiMsg]);
-    }, 1500); // 1.5s typing delay
+    } catch (e) {
+      console.error("Lumo AI error", e);
+      const aiMsg: Message = {
+        id: nextId.current++,
+        role: "ai",
+        text: libReply?.text ?? "I hit a hiccup reaching the AI service. Try again in a moment.",
+        insights: libReply?.insights,
+      };
+      setMessages((prev) => [...prev, aiMsg]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const handleSend = () => {
