@@ -222,11 +222,12 @@ const ProblemSolution = () => {
   const titleY = useTransform(p, [0, 0.6], [60, -20]);
 
   // Before → After morph happens between 0.25 → 0.65 of the section
+  // Keep BOTH cards fully visible and crisp — only the fill meters and a soft highlight diverge.
   const morph = useTransform(p, [0.25, 0.65], [0, 1]);
-  const leakOpacity = useTransform(morph, [0, 0.5, 1], [1, 0.3, 0]);
-  const vaultOpacity = useTransform(morph, [0, 0.5, 1], [0, 0.3, 1]);
-  const leakScale = useTransform(morph, [0, 1], [1, 0.92]);
-  const vaultScale = useTransform(morph, [0, 1], [0.92, 1]);
+  const leakScale = useTransform(morph, [0, 1], [1.02, 0.97]);
+  const vaultScale = useTransform(morph, [0, 1], [0.97, 1.02]);
+  const leakHighlight = useTransform(morph, [0, 1], [1, 0.55]);
+  const vaultHighlight = useTransform(morph, [0, 1], [0.55, 1]);
 
   // counters
   const lostNum = useTransform(morph, [0, 1], [2819, 2819]); // displayed on "before"
