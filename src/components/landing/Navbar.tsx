@@ -26,13 +26,11 @@ const Navbar = () => {
       initial={{ y: -40, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className={`fixed left-1/2 -translate-x-1/2 z-50 transition-all duration-500 ${
-        scrolled
-          ? "top-3 w-[95%] max-w-5xl rounded-full bg-white/70 backdrop-blur-2xl border border-white/60 shadow-[0_10px_40px_-10px_rgba(120,120,200,0.18)]"
-          : "top-0 w-full max-w-7xl rounded-none border-b border-transparent bg-transparent"
+      className={`fixed left-1/2 -translate-x-1/2 z-50 transition-all duration-500 top-3 rounded-full bg-white/70 backdrop-blur-2xl border border-white/60 shadow-[0_10px_40px_-10px_rgba(120,120,200,0.18)] ${
+        scrolled ? "w-[94%] max-w-4xl" : "w-[96%] max-w-5xl"
       }`}
     >
-      <div className={`flex items-center justify-between px-5 sm:px-6 transition-all duration-500 ${scrolled ? "h-12" : "h-16"}`}>
+      <div className={`flex items-center justify-between px-5 sm:px-6 transition-all duration-500 ${scrolled ? "h-12" : "h-14"}`}>
         <Link to="/" className="flex items-center gap-2 group">
           <motion.div
             animate={{ rotate: [0, 8, -8, 0] }}
