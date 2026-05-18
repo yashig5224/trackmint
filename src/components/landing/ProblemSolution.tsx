@@ -300,7 +300,7 @@ const ProblemSolution = () => {
             </motion.div>
 
             {/* AFTER */}
-            <motion.div style={{ opacity: vaultOpacity, scale: vaultScale }} className="relative">
+            <motion.div style={{ opacity: vaultHighlight, scale: vaultScale }} className="relative">
               <div className="flex items-center gap-2 mb-4 justify-center md:justify-start">
                 <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 font-bold tracking-wider uppercase">
                   After · With Lumo
