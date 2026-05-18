@@ -564,15 +564,19 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
                     <img src={lumoAvatar} alt="Lumo AI" className="w-full h-full object-cover" />
                   </div>
                 </div>
-                <div className="p-6 rounded-[24px] rounded-tl-xl bg-white/60 border border-white backdrop-blur-xl flex items-center gap-2 h-[72px]">
-                  {[0, 1, 2].map((i) => (
-                    <motion.div
-                      key={i}
-                      animate={{ y: [0, -8, 0], scale: [1, 1.2, 1] }}
-                      transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15 }}
-                      className="w-2.5 h-2.5 bg-gray-400 rounded-full"
-                    />
-                  ))}
+                <div className="px-5 py-4 rounded-[24px] rounded-tl-xl bg-white/80 border border-white backdrop-blur-xl flex items-center gap-3 shadow-sm">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+                    className="w-5 h-5 rounded-full border-2 border-blue-200 border-t-blue-500"
+                  />
+                  <motion.span
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 1.6, repeat: Infinity }}
+                    className="text-sm font-medium bg-gradient-to-r from-indigo-600 via-violet-500 to-sky-500 bg-clip-text text-transparent"
+                  >
+                    Lumo AI is analyzing your finances…
+                  </motion.span>
                 </div>
               </motion.div>
             )}
