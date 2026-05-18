@@ -160,8 +160,8 @@ const WalletCard = ({
             style={{ height: fillH }}
             className={`absolute inset-x-0 bottom-0 ${
               isVault
-                ? "bg-gradient-to-t from-emerald-400 via-sky-400 to-violet-400"
-                : "bg-gradient-to-t from-rose-400 via-amber-300 to-rose-200"
+                ? "bg-gradient-to-t from-emerald-500 via-teal-400 to-indigo-400"
+                : "bg-gradient-to-t from-rose-500 via-pink-400 to-amber-300"
             }`}
           >
             {/* shimmer wave */}
