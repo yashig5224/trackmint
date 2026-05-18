@@ -442,7 +442,7 @@ const Login = () => {
             {/* Mascot stage */}
             <div className="relative h-[360px] mt-10">
               <div className="absolute inset-0 flex items-center justify-center">
-                <LumoMascot isSignUp={isSignUp} submitting={submitting} />
+                <LumoMascot isSignUp={isSignUp} submitting={submitting} waving={burst} />
               </div>
 
               <InsightCard delay={0.2} className="top-2 left-0">
