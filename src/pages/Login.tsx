@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import authBg from "@/assets/auth-bg.png";
 
 /* ────────────────────────────────────────────────────────────── */
 /*  Animated background — mesh gradient orbs + drifting rupees    */
@@ -403,6 +404,16 @@ const Login = () => {
       onMouseMove={onMouseMove}
       className="min-h-screen relative bg-gradient-to-br from-white via-sky-50/40 to-violet-50/40 overflow-hidden"
     >
+      {/* Uploaded immersive scene background */}
+      <div className="absolute inset-0 pointer-events-none">
+        <img
+          src={authBg}
+          alt=""
+          className="w-full h-full object-cover"
+          style={{ objectPosition: "center" }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-white/55 via-white/40 to-white/70" />
+      </div>
       <AuroraBackdrop mode={isSignUp ? "up" : "in"} />
       <MoneyParticles />
       <MoneyBurst show={burst} />
