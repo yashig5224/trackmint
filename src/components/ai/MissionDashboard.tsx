@@ -848,6 +848,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
           </div>
         </div>
       </motion.div>
+      </div>
     </motion.div>
   );
 };
