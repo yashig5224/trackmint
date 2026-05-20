@@ -62,15 +62,34 @@ const HeroSection = () => {
             Universe.
           </motion.h1>
 
+          <div className="mt-5 flex items-center justify-center lg:justify-start gap-2 text-xl sm:text-2xl font-display font-semibold">
+            <span className="text-foreground/45">It learns to</span>
+            <span className="relative inline-block min-w-[8ch] text-left">
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={ROTATING[wordIdx]}
+                  initial={{ y: 18, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: -18, opacity: 0 }}
+                  transition={{ duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  className="inline-block bg-clip-text text-transparent bg-gradient-to-r from-[hsl(220,95%,55%)] via-[hsl(260,85%,60%)] to-[hsl(300,80%,65%)]"
+                >
+                  {ROTATING[wordIdx]}
+                </motion.span>
+              </AnimatePresence>
+            </span>
+          </div>
+
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
             className="mt-6 text-base sm:text-lg text-foreground/65 leading-relaxed max-w-xl mx-auto lg:mx-0"
           >
-            AI-powered budgeting, gamified goals, and a personal finance coach that
-            actually understands you. Track every rupee, level up your money game.
+            An intelligent finance ecosystem that understands your spending,
+            predicts your future, and helps you build wealth effortlessly.
           </motion.p>
+
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -117,9 +136,10 @@ const HeroSection = () => {
           </motion.div>
         </div>
 
-        {/* RIGHT — interactive phone with live AI chat */}
-        <HeroPhone />
+        {/* RIGHT — floating AI financial ecosystem */}
+        <HeroOrbit />
       </motion.div>
+
     </section>
   );
 };
