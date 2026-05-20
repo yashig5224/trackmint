@@ -22,11 +22,11 @@ const HowItWorks = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <p className="text-xs tracking-[0.25em] uppercase text-foreground/55 mb-3 font-medium">✦ How It Works</p>
+          <p className="text-xs tracking-[0.25em] uppercase text-foreground/55 mb-3 font-medium">✦ Your Financial Evolution</p>
           <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold tracking-[-0.03em]">
-            Six steps to{" "}
+            Watch your money{" "}
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-[hsl(220,90%,55%)] to-[hsl(280,80%,62%)]">
-              financial flow
+              transform
             </span>.
           </h2>
         </motion.div>

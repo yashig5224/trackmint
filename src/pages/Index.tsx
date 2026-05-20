@@ -1,7 +1,7 @@
 import Navbar from "@/components/landing/Navbar";
 import HeroSection from "@/components/landing/HeroSection";
 import CoachPreview from "@/components/landing/CoachPreview";
-import PersonasShowcase from "@/components/landing/PersonasShowcase";
+
 import AbilitiesSection from "@/components/landing/AbilitiesSection";
 import DashboardPreview from "@/components/landing/DashboardPreview";
 import ProblemSolution from "@/components/landing/ProblemSolution";
@@ -17,7 +17,7 @@ const Index = () => {
       <Navbar />
       <HeroSection />
       <CoachPreview />
-      <PersonasShowcase />
+      
       <AbilitiesSection />
       <DashboardPreview />
       <ProblemSolution />
