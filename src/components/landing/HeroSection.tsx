@@ -3,10 +3,19 @@ import { useRef } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Sparkles } from "lucide-react";
 import BackgroundFX from "./BackgroundFX";
-import HeroPhone from "./HeroPhone";
+import HeroOrbit from "./HeroOrbit";
+import { AnimatePresence } from "framer-motion";
+import { useEffect, useState } from "react";
+
+const ROTATING = ["Track.", "Predict.", "Grow.", "Automate."];
 
 const HeroSection = () => {
   const ref = useRef<HTMLDivElement>(null);
+  const [wordIdx, setWordIdx] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setWordIdx((i) => (i + 1) % ROTATING.length), 2200);
+    return () => clearInterval(t);
+  }, []);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
   const y = useTransform(scrollYProgress, [0, 1], [0, 120]);
   const opacity = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
