@@ -22,6 +22,7 @@ import { lovable } from "@/integrations/lovable";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import authBg from "@/assets/auth-bg.png";
+import LumoMascotShared, { type LumoTrigger } from "@/components/lumo/LumoMascot";
 
 /* ────────────────────────────────────────────────────────────── */
 /*  Animated background — mesh gradient orbs + drifting rupees    */
@@ -129,89 +130,28 @@ const InsightCard = ({
 );
 
 const LumoMascot = ({
-  isSignUp,
   submitting,
   waving,
+  errored,
 }: {
   isSignUp: boolean;
   submitting: boolean;
   waving: boolean;
-}) => (
-  <motion.div
-    animate={{ y: [0, -8, 0] }}
-    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-    className="relative w-44 h-44"
-  >
-    {/* glow ring — intensifies on wave */}
-    <motion.div
-      animate={{
-        scale: waving ? [1, 1.3, 1.1] : [1, 1.08, 1],
-        opacity: waving ? [0.6, 0.95, 0.7] : [0.4, 0.7, 0.4],
-      }}
-      transition={{ duration: waving ? 1.2 : 3, repeat: Infinity }}
-      className={`absolute inset-0 rounded-full blur-2xl ${
-        waving
-          ? "bg-gradient-to-tr from-emerald-300/80 via-sky-300/70 to-violet-300/70"
-          : "bg-gradient-to-tr from-sky-300/60 via-violet-300/60 to-emerald-200/60"
-      }`}
-    />
-    {/* body */}
-    <div className="relative w-full h-full rounded-[40%] bg-gradient-to-b from-white to-sky-50 border border-white shadow-[0_25px_80px_-20px_rgba(59,130,246,0.35)] flex items-center justify-center">
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 w-20 h-1.5 rounded-full bg-gradient-to-r from-sky-400 to-violet-400" />
-
-      {/* Waving arm — appears only on success */}
-      <AnimatePresence>
-        {waving && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5, rotate: -30 }}
-            animate={{ opacity: 1, scale: 1, rotate: [20, -20, 20, -20, 20] }}
-            exit={{ opacity: 0, scale: 0.5 }}
-            transition={{ duration: 1.2, ease: "easeInOut" }}
-            className="absolute -right-3 top-12 origin-bottom-left"
-          >
-            <div className="w-6 h-10 rounded-full bg-gradient-to-b from-white to-sky-100 border border-white shadow-md" />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* eyes */}
-      <div className="flex gap-5 mt-2">
-        <motion.span
-          animate={{ scaleY: [1, 0.1, 1] }}
-          transition={{ duration: 0.3, repeat: Infinity, repeatDelay: waving ? 1.2 : 3.2 }}
-          className="block w-3 h-3 rounded-full bg-slate-900"
-        />
-        <motion.span
-          animate={{ scaleY: [1, 0.1, 1] }}
-          transition={{ duration: 0.3, repeat: Infinity, repeatDelay: waving ? 1.2 : 3.2 }}
-          className="block w-3 h-3 rounded-full bg-slate-900"
-        />
-      </div>
-      {/* mouth — bigger smile on signup, beaming smile on wave */}
-      <motion.div
-        key={waving ? "beam" : isSignUp ? "smile" : "calm"}
-        initial={{ scaleX: 0.6, opacity: 0 }}
-        animate={{ scaleX: 1, opacity: 1 }}
-        className={`absolute bottom-10 h-2 rounded-full bg-slate-900 ${
-          waving ? "w-10" : isSignUp ? "w-8" : "w-5"
-        }`}
-        style={{
-          borderRadius: waving || isSignUp ? "0 0 999px 999px" : "999px",
-        }}
-      />
-      {/* status dot */}
-      <span className="absolute top-3 right-3 flex h-2.5 w-2.5">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
-      </span>
-      {submitting && (
-        <div className="absolute -bottom-2 inset-x-0 flex justify-center">
-          <Loader2 className="w-4 h-4 animate-spin text-sky-500" />
-        </div>
-      )}
+  errored?: boolean;
+}) => {
+  const trigger: LumoTrigger = errored
+    ? "error"
+    : waving
+    ? "success"
+    : submitting
+    ? "loading"
+    : "idle";
+  return (
+    <div className="relative">
+      <LumoMascotShared trigger={trigger} size={220} />
     </div>
-  </motion.div>
-);
+  );
+};
 
 /* ────────────────────────────────────────────────────────────── */
 /*  Animated input with floating label + focus glow               */

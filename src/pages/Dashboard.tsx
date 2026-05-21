@@ -7,6 +7,7 @@ import {
 } from "recharts";
 import { Sparkles, Target, Wallet, TrendingUp, CreditCard, ChevronRight, LayoutDashboard, Search, Bell, MessageSquare } from "lucide-react";
 import { getCategoryIcon, NAV_ICONS } from "@/assets/icons";
+import LumoMascot from "@/components/lumo/LumoMascot";
 
 // Mock Data
 const areaData = [
@@ -692,6 +693,21 @@ const Dashboard = () => {
           })}
         </nav>
       </div>
+
+      {/* Floating Lumo mini-assistant */}
+      <Link
+        to="/coach"
+        className="fixed bottom-24 right-5 md:bottom-8 md:right-8 z-50 group"
+        aria-label="Ask Lumo"
+      >
+        <div className="relative">
+          <div className="absolute -inset-2 rounded-full bg-gradient-to-tr from-sky-300/60 via-violet-300/60 to-emerald-200/60 blur-xl opacity-70 group-hover:opacity-100 transition" />
+          <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-full bg-white/85 backdrop-blur-xl border border-white shadow-[0_18px_45px_-12px_rgba(99,102,241,0.5)] flex items-end justify-center overflow-hidden">
+            <LumoMascot trigger="idle" size={64} autoSequence={false} />
+          </div>
+          <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-400 ring-2 ring-white animate-pulse" />
+        </div>
+      </Link>
     </div>
   );
 };
