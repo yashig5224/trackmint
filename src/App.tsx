@@ -36,6 +36,9 @@ const App = () => (
               <ProtectedRoute><UserApp /></ProtectedRoute>
             } />
             <Route path="/coach" element={<Coach />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/billing" element={<Billing />} />
+            <Route path="/checkout/return" element={<CheckoutReturn />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
