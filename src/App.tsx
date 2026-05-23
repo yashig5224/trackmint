@@ -11,6 +11,9 @@ import Coach from "./pages/Coach";
 import Login from "./pages/Login";
 import UserApp from "./pages/UserApp";
 import OnboardingFlow from "./components/auth/OnboardingFlow";
+import Pricing from "./pages/Pricing";
+import Billing from "./pages/Billing";
+import CheckoutReturn from "./pages/CheckoutReturn";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
