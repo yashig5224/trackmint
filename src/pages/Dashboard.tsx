@@ -196,7 +196,21 @@ const Dashboard = () => {
               <input type="text" placeholder="Search transactions..." className="bg-transparent text-sm outline-none w-48 placeholder:text-gray-400" />
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <Link
+              to="/billing"
+              className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white shadow-md bg-gradient-to-r ${planAccent} relative overflow-hidden group`}
+            >
+              {tier === "elite" && <Crown className="w-3.5 h-3.5" />}
+              {tier === "pro" && <Sparkles className="w-3.5 h-3.5" />}
+              {tier === "free" && <Sparkles className="w-3.5 h-3.5" />}
+              <span className="relative">{planLabel} Plan</span>
+              <motion.div
+                animate={{ x: ["-100%", "200%"] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                className="absolute inset-y-0 -inset-x-1 w-1/3 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 pointer-events-none"
+              />
+            </Link>
             <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center border border-gray-100 shadow-sm relative text-gray-500 hover:text-gray-900 transition-colors">
               <Bell className="w-5 h-5" />
               <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
