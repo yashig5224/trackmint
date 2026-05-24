@@ -10,6 +10,7 @@ import StatsAndTestimonials from "@/components/landing/StatsAndTestimonials";
 import CTASection from "@/components/landing/CTASection";
 import Footer from "@/components/landing/Footer";
 import AmbientLayer from "@/components/landing/AmbientLayer";
+import PricingPreview from "@/components/landing/PricingPreview";
 
 const Index = () => {
   return (
@@ -25,6 +26,7 @@ const Index = () => {
         <HowItWorks />
         <DemoVsUser />
         <StatsAndTestimonials />
+        <PricingPreview />
         <CTASection />
         <Footer />
       </div>

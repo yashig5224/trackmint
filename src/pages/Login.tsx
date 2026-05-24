@@ -292,6 +292,12 @@ const Login = () => {
   useEffect(() => {
     if (authLoading) return;
     if (user && profile) {
+      const params = new URLSearchParams(window.location.search);
+      const redirect = params.get("redirect");
+      if (redirect) {
+        navigate(redirect, { replace: true });
+        return;
+      }
       navigate(profile.onboarding_completed ? "/app" : "/onboarding", { replace: true });
     }
   }, [user, profile, authLoading, navigate]);

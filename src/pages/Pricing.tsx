@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Sparkles, ArrowRight, Shield, TrendingUp, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,9 @@ import AmbientLayer from "@/components/landing/AmbientLayer";
 import { PLANS, COMPARISON_ROWS, FAQ_ITEMS, BillingCycle, Plan } from "@/lib/plans";
 import { CheckoutDialog } from "@/components/payments/CheckoutDialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useSubscription } from "@/hooks/useSubscription";
+import { getPendingCheckout, setPendingCheckout, clearPendingCheckout } from "@/lib/pendingCheckout";
 
 function PriceDisplay({ plan, cycle }: { plan: Plan; cycle: BillingCycle }) {
   const amount = cycle === "yearly" ? plan.priceYearly : plan.priceMonthly;
@@ -48,20 +49,42 @@ export default function Pricing() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { tier } = useSubscription();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const openCheckoutFor = (priceId: string, planName: string) => {
+    setCheckoutPriceId(priceId);
+    setCheckoutPlan(planName);
+  };
+
+  // Resume a pending checkout after the user has just logged in.
+  useEffect(() => {
+    if (!user) return;
+    const pending = getPendingCheckout();
+    const shouldResume = searchParams.get("checkout") === "1" || pending;
+    if (shouldResume && pending) {
+      setCycle(pending.cycle);
+      openCheckoutFor(pending.priceId, pending.planName);
+      clearPendingCheckout();
+      if (searchParams.get("checkout")) {
+        searchParams.delete("checkout");
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelect = (plan: Plan) => {
     if (plan.id === "free") {
-      navigate(user ? "/dashboard" : "/login");
-      return;
-    }
-    if (!user) {
-      navigate("/login?redirect=/pricing");
+      navigate(user ? "/app" : "/login");
       return;
     }
     const priceId = cycle === "yearly" ? plan.priceIdYearly : plan.priceIdMonthly;
     if (!priceId) return;
-    setCheckoutPriceId(priceId);
-    setCheckoutPlan(plan.name);
+    if (!user) {
+      setPendingCheckout({ priceId, planName: plan.name, cycle });
+      navigate("/login?redirect=/pricing?checkout=1");
+      return;
+    }
+    openCheckoutFor(priceId, plan.name);
   };
 
   const savings = useMemo(() => {
