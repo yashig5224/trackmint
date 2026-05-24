@@ -233,6 +233,61 @@ const Dashboard = () => {
                 transition={{ duration: 0.4 }}
                 className="max-w-6xl mx-auto space-y-8"
               >
+                {/* Premium Upgrade Banner */}
+                {!isPro && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="relative overflow-hidden rounded-3xl p-6 sm:p-7 bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 text-white shadow-xl shadow-indigo-500/20"
+                  >
+                    <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
+                    <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-fuchsia-400/20 blur-3xl" />
+                    {/* particles */}
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <motion.span
+                        key={i}
+                        initial={{ y: 0, opacity: 0 }}
+                        animate={{ y: [-10, -40, -10], opacity: [0, 0.6, 0] }}
+                        transition={{ duration: 4 + i, repeat: Infinity, delay: i * 0.3 }}
+                        style={{ left: `${10 + i * 11}%`, bottom: "20%" }}
+                        className="absolute text-white/60 text-xs"
+                      >
+                        ✦
+                      </motion.span>
+                    ))}
+                    <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-5">
+                      <div className="flex items-start gap-4 max-w-xl">
+                        <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center shrink-0 border border-white/20">
+                          <Crown className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur text-[10px] font-semibold uppercase tracking-wider mb-2 border border-white/20">
+                            <Sparkles className="w-3 h-3" /> Limited offer
+                          </div>
+                          <h3 className="text-xl sm:text-2xl font-display font-bold leading-tight">
+                            Unlock advanced AI forecasting, spending heatmaps & elite financial intelligence.
+                          </h3>
+                          <p className="text-sm text-white/80 mt-2">Pro plan from ₹299/mo. Cancel anytime.</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2 shrink-0">
+                        <button
+                          onClick={() => openUpgrade("pro")}
+                          className="px-5 py-2.5 rounded-xl bg-white text-indigo-700 text-sm font-semibold shadow-lg hover:scale-[1.03] transition-transform inline-flex items-center gap-1.5"
+                        >
+                          Upgrade Now <ArrowRight className="w-4 h-4" />
+                        </button>
+                        <Link
+                          to="/pricing"
+                          className="px-5 py-2.5 rounded-xl bg-white/10 backdrop-blur border border-white/25 text-white text-sm font-semibold hover:bg-white/20 transition-colors"
+                        >
+                          Compare Plans
+                        </Link>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
                 {/* Greeting & Weekly Score */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                   <div>
