@@ -5,9 +5,11 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar,
 } from "recharts";
-import { Sparkles, Target, Wallet, TrendingUp, CreditCard, ChevronRight, LayoutDashboard, Search, Bell, MessageSquare } from "lucide-react";
+import { Sparkles, Target, Wallet, TrendingUp, CreditCard, ChevronRight, LayoutDashboard, Search, Bell, MessageSquare, Crown, Lock, ArrowRight } from "lucide-react";
 import { getCategoryIcon, NAV_ICONS } from "@/assets/icons";
 import LumoMascot from "@/components/lumo/LumoMascot";
+import { useSubscription } from "@/hooks/useSubscription";
+import { UpgradeModal } from "@/components/payments/UpgradeModal";
 
 // Mock Data
 const areaData = [
