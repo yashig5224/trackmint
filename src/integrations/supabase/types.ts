@@ -118,6 +118,9 @@ export type Database = {
           environment: string
           id: string
           payment_status: string
+          plan_name: string | null
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
           stripe_invoice_id: string | null
           stripe_payment_intent_id: string | null
           stripe_session_id: string | null
@@ -130,6 +133,9 @@ export type Database = {
           environment?: string
           id?: string
           payment_status: string
+          plan_name?: string | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
           stripe_invoice_id?: string | null
           stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
@@ -142,6 +148,9 @@ export type Database = {
           environment?: string
           id?: string
           payment_status?: string
+          plan_name?: string | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
           stripe_invoice_id?: string | null
           stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
@@ -151,10 +160,12 @@ export type Database = {
       }
       profiles: {
         Row: {
+          ai_usage_limit: number | null
           avatar_url: string | null
           country: string | null
           created_at: string
           currency: string | null
+          current_plan: string | null
           email: string | null
           financial_score: number | null
           full_name: string | null
@@ -163,17 +174,21 @@ export type Database = {
           monthly_income: number | null
           onboarding_completed: boolean | null
           onboarding_data: Json | null
+          premium_enabled: boolean | null
           primary_goal: string | null
           selected_persona: string | null
           streak: number | null
           updated_at: string
+          voice_enabled: boolean | null
           xp: number | null
         }
         Insert: {
+          ai_usage_limit?: number | null
           avatar_url?: string | null
           country?: string | null
           created_at?: string
           currency?: string | null
+          current_plan?: string | null
           email?: string | null
           financial_score?: number | null
           full_name?: string | null
@@ -182,17 +197,21 @@ export type Database = {
           monthly_income?: number | null
           onboarding_completed?: boolean | null
           onboarding_data?: Json | null
+          premium_enabled?: boolean | null
           primary_goal?: string | null
           selected_persona?: string | null
           streak?: number | null
           updated_at?: string
+          voice_enabled?: boolean | null
           xp?: number | null
         }
         Update: {
+          ai_usage_limit?: number | null
           avatar_url?: string | null
           country?: string | null
           created_at?: string
           currency?: string | null
+          current_plan?: string | null
           email?: string | null
           financial_score?: number | null
           full_name?: string | null
@@ -201,57 +220,80 @@ export type Database = {
           monthly_income?: number | null
           onboarding_completed?: boolean | null
           onboarding_data?: Json | null
+          premium_enabled?: boolean | null
           primary_goal?: string | null
           selected_persona?: string | null
           streak?: number | null
           updated_at?: string
+          voice_enabled?: boolean | null
           xp?: number | null
         }
         Relationships: []
       }
       subscriptions: {
         Row: {
+          amount: number | null
+          billing_cycle: string | null
           cancel_at_period_end: boolean | null
           created_at: string | null
           current_period_end: string | null
           current_period_start: string | null
           environment: string
           id: string
-          price_id: string
-          product_id: string
+          order_id: string | null
+          payment_id: string | null
+          plan_name: string | null
+          price_id: string | null
+          product_id: string | null
+          renewal_date: string | null
+          start_date: string | null
           status: string
-          stripe_customer_id: string
-          stripe_subscription_id: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          amount?: number | null
+          billing_cycle?: string | null
           cancel_at_period_end?: boolean | null
           created_at?: string | null
           current_period_end?: string | null
           current_period_start?: string | null
           environment?: string
           id?: string
-          price_id: string
-          product_id: string
+          order_id?: string | null
+          payment_id?: string | null
+          plan_name?: string | null
+          price_id?: string | null
+          product_id?: string | null
+          renewal_date?: string | null
+          start_date?: string | null
           status?: string
-          stripe_customer_id: string
-          stripe_subscription_id: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          amount?: number | null
+          billing_cycle?: string | null
           cancel_at_period_end?: boolean | null
           created_at?: string | null
           current_period_end?: string | null
           current_period_start?: string | null
           environment?: string
           id?: string
-          price_id?: string
-          product_id?: string
+          order_id?: string | null
+          payment_id?: string | null
+          plan_name?: string | null
+          price_id?: string | null
+          product_id?: string | null
+          renewal_date?: string | null
+          start_date?: string | null
           status?: string
-          stripe_customer_id?: string
-          stripe_subscription_id?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string | null
           user_id?: string
         }
