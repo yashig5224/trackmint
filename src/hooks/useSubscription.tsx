@@ -1,38 +1,37 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { getStripeEnvironment } from "@/lib/stripe";
 
 export type PlanTier = "free" | "pro" | "elite";
 
 export interface SubscriptionRecord {
   id: string;
   status: string;
-  price_id: string;
-  product_id: string;
+  plan_name: string | null;
+  billing_cycle: string | null;
+  amount: number | null;
+  payment_id: string | null;
+  order_id: string | null;
+  start_date: string | null;
+  renewal_date: string | null;
   current_period_end: string | null;
   cancel_at_period_end: boolean;
-  stripe_customer_id: string;
-  environment: string;
+  price_id: string | null;
 }
 
-const PRO_PRICES = new Set(["pro_monthly", "pro_yearly"]);
-const ELITE_PRICES = new Set(["elite_monthly", "elite_yearly"]);
-
-function tierForPrice(priceId?: string): PlanTier {
-  if (!priceId) return "free";
-  if (ELITE_PRICES.has(priceId)) return "elite";
-  if (PRO_PRICES.has(priceId)) return "pro";
+function tierForPriceKey(key?: string | null): PlanTier {
+  if (!key) return "free";
+  if (key.startsWith("elite") || key.startsWith("ultimate")) return "elite";
+  if (key.startsWith("pro")) return "pro";
   return "free";
 }
 
-function isActiveStatus(sub: SubscriptionRecord | null): boolean {
+function isActive(sub: SubscriptionRecord | null): boolean {
   if (!sub) return false;
-  const end = sub.current_period_end ? new Date(sub.current_period_end).getTime() : Infinity;
-  const future = end > Date.now();
-  if (["active", "trialing", "past_due"].includes(sub.status) && future) return true;
-  if (sub.status === "canceled" && future) return true;
-  return false;
+  if (sub.status !== "active") return false;
+  const end = sub.renewal_date || sub.current_period_end;
+  if (!end) return true;
+  return new Date(end).getTime() > Date.now();
 }
 
 export function useSubscription() {
@@ -41,16 +40,11 @@ export function useSubscription() {
   const [loading, setLoading] = useState(true);
 
   const fetchSub = useCallback(async () => {
-    if (!user) {
-      setSubscription(null);
-      setLoading(false);
-      return;
-    }
+    if (!user) { setSubscription(null); setLoading(false); return; }
     const { data } = await supabase
       .from("subscriptions")
       .select("*")
       .eq("user_id", user.id)
-      .eq("environment", getStripeEnvironment())
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -58,32 +52,27 @@ export function useSubscription() {
     setLoading(false);
   }, [user]);
 
-  useEffect(() => {
-    fetchSub();
-  }, [fetchSub]);
+  useEffect(() => { fetchSub(); }, [fetchSub]);
 
   useEffect(() => {
     if (!user) return;
     const channel = supabase
       .channel(`subs-${user.id}`)
-      .on(
-        "postgres_changes",
+      .on("postgres_changes",
         { event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${user.id}` },
         () => fetchSub(),
       )
       .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [user, fetchSub]);
 
-  const isActive = isActiveStatus(subscription);
-  const tier: PlanTier = isActive ? tierForPrice(subscription?.price_id) : "free";
+  const active = isActive(subscription);
+  const tier: PlanTier = active ? tierForPriceKey(subscription?.price_id) : "free";
 
   return {
     subscription,
     tier,
-    isActive,
+    isActive: active,
     isPro: tier === "pro" || tier === "elite",
     isElite: tier === "elite",
     loading,

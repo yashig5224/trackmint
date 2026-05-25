@@ -2,7 +2,7 @@
 // their place. Cleared as soon as it's consumed.
 
 export interface PendingCheckout {
-  priceId: string;
+  planKey: string;
   planName: string;
   cycle: "monthly" | "yearly";
 }
@@ -10,22 +10,14 @@ export interface PendingCheckout {
 const KEY = "fintrack:pendingCheckout";
 
 export function setPendingCheckout(p: PendingCheckout) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(p));
-  } catch {}
+  try { localStorage.setItem(KEY, JSON.stringify(p)); } catch {}
 }
-
 export function getPendingCheckout(): PendingCheckout | null {
   try {
     const raw = localStorage.getItem(KEY);
     return raw ? (JSON.parse(raw) as PendingCheckout) : null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
-
 export function clearPendingCheckout() {
-  try {
-    localStorage.removeItem(KEY);
-  } catch {}
+  try { localStorage.removeItem(KEY); } catch {}
 }

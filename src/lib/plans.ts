@@ -3,11 +3,6 @@ import { Sparkles, Crown, Zap } from "lucide-react";
 export type PlanId = "free" | "pro" | "elite";
 export type BillingCycle = "monthly" | "yearly";
 
-export interface PlanFeature {
-  label: string;
-  included: boolean;
-}
-
 export interface Plan {
   id: PlanId;
   name: string;
@@ -16,8 +11,9 @@ export interface Plan {
   icon: typeof Sparkles;
   priceMonthly: number;
   priceYearly: number;
-  priceIdMonthly?: string;
-  priceIdYearly?: string;
+  /** Razorpay planKey (sent to create-razorpay-order). */
+  planKeyMonthly?: string;
+  planKeyYearly?: string;
   cta: string;
   highlight: boolean;
   gradient: string;
@@ -48,14 +44,14 @@ export const PLANS: Plan[] = [
   },
   {
     id: "pro",
-    name: "Pro",
+    name: "Pro AI",
     tagline: "Unlock intelligent finance.",
     badge: "Most Popular",
     icon: Zap,
-    priceMonthly: 299,
-    priceYearly: 2999,
-    priceIdMonthly: "pro_monthly",
-    priceIdYearly: "pro_yearly",
+    priceMonthly: 799,
+    priceYearly: 7999,
+    planKeyMonthly: "pro_monthly",
+    planKeyYearly: "pro_yearly",
     cta: "Upgrade to Pro",
     highlight: true,
     gradient: "from-indigo-50 via-white to-violet-50",
@@ -68,7 +64,7 @@ export const PLANS: Plan[] = [
       "Goal forecasting",
       "Export reports (PDF / CSV)",
       "AI recommendations",
-      "Real-time dashboard",
+      "Voice assistant",
     ],
   },
   {
@@ -76,11 +72,11 @@ export const PLANS: Plan[] = [
     name: "Elite AI+",
     tagline: "Your private financial intelligence.",
     icon: Crown,
-    priceMonthly: 799,
-    priceYearly: 7999,
-    priceIdMonthly: "elite_monthly",
-    priceIdYearly: "elite_yearly",
-    cta: "Unlock Elite AI",
+    priceMonthly: 1499,
+    priceYearly: 14999,
+    planKeyMonthly: "elite_monthly",
+    planKeyYearly: "elite_yearly",
+    cta: "Go Elite",
     highlight: false,
     gradient: "from-violet-50 via-fuchsia-50 to-white",
     ring: "ring-1 ring-violet-300/70",
@@ -91,9 +87,8 @@ export const PLANS: Plan[] = [
       "Investment analysis",
       "Financial forecasting",
       "AI memory system",
-      "Advanced AI reports",
+      "Executive reports",
       "Priority AI processing",
-      "Smart wealth insights",
     ],
   },
 ];
@@ -105,30 +100,15 @@ export const COMPARISON_ROWS: { label: string; values: [string, string, string] 
   { label: "AI Forecasting", values: ["—", "✓", "Multi-horizon"] },
   { label: "Multi-AI (GPT/Gemini/Claude)", values: ["—", "—", "✓"] },
   { label: "Export Reports", values: ["—", "✓", "✓"] },
-  { label: "Voice AI Coach", values: ["—", "—", "✓"] },
+  { label: "Voice AI Coach", values: ["—", "Basic", "Full"] },
   { label: "Smart Insights", values: ["Basic", "Advanced", "Wealth-grade"] },
   { label: "Goal Forecasting", values: ["—", "✓", "✓"] },
 ];
 
 export const FAQ_ITEMS = [
-  {
-    q: "Can I cancel anytime?",
-    a: "Yes — cancel with one click from Manage Subscription. You keep access until the end of your current billing period.",
-  },
-  {
-    q: "Is payment secure?",
-    a: "All payments are processed by Stripe with PCI-DSS level 1 compliance. We never see or store your card details.",
-  },
-  {
-    q: "Which AI models are included?",
-    a: "Pro uses our optimized Lumo model. Elite AI+ unlocks routing across GPT, Gemini and Claude for the best answer on every question.",
-  },
-  {
-    q: "Can I switch plans later?",
-    a: "Yes — upgrade, downgrade or switch billing cycles anytime. Changes are pro-rated automatically.",
-  },
-  {
-    q: "Is my financial data encrypted?",
-    a: "Everything is encrypted in transit (TLS 1.3) and at rest (AES-256). Your data is yours — we never sell it.",
-  },
+  { q: "Can I cancel anytime?", a: "Yes — cancel with one click from Manage Subscription. You keep access until the end of your current billing period." },
+  { q: "Is payment secure?", a: "All payments are processed via Razorpay with PCI-DSS Level 1 compliance. We never see or store your card details." },
+  { q: "Which AI models are included?", a: "Pro uses our optimized Lumo model. Elite AI+ unlocks routing across GPT, Gemini and Claude for the best answer on every question." },
+  { q: "Can I switch plans later?", a: "Yes — upgrade, downgrade or switch billing cycles anytime from your Billing page." },
+  { q: "Is my financial data encrypted?", a: "Everything is encrypted in transit (TLS 1.3) and at rest (AES-256). Your data is yours — we never sell it." },
 ];

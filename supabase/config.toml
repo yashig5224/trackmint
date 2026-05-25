@@ -1,10 +1,10 @@
 project_id = "ikhewpawkwtfkmclkkxq"
 
-[functions.create-checkout]
+[functions.create-razorpay-order]
 verify_jwt = false
 
-[functions.payments-webhook]
+[functions.verify-razorpay-payment]
 verify_jwt = false
 
-[functions.create-portal-session]
+[functions.cancel-subscription]
 verify_jwt = false
