@@ -311,8 +311,35 @@ const StatCard = ({ label, value, change, positive, Icon }: { label: string; val
   </motion.div>
 );
 
-const Overview = ({ stats, insights, trendData, categoryData, currency, persona }: any) => (
+const Overview = ({ stats, insights, trendData, categoryData, currency, persona, tier, onUpgrade }: any) => (
   <div className="space-y-6">
+    {tier !== "elite" && (
+      <motion.button
+        onClick={onUpgrade}
+        whileHover={{ y: -2 }}
+        className="w-full text-left relative overflow-hidden rounded-3xl p-5 bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 text-white shadow-xl shadow-indigo-500/30 group"
+      >
+        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/20 blur-3xl" />
+        <div className="flex items-center justify-between gap-4 relative">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
+              <Crown className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-display text-lg font-bold leading-tight">
+                {tier === "pro" ? "Unlock Elite AI+" : "Upgrade to Pro AI"}
+              </p>
+              <p className="text-xs text-white/80">
+                {tier === "pro" ? "Multi-AI routing, Voice Coach & investment forecasting." : "Unlimited AI chats, smart insights, exports & more."}
+              </p>
+            </div>
+          </div>
+          <div className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/15 backdrop-blur text-sm font-semibold group-hover:bg-white/25 transition">
+            Upgrade <Sparkles className="w-4 h-4" />
+          </div>
+        </div>
+      </motion.button>
+    )}
     {persona && (
       <div className="px-4 py-3 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-100 text-sm flex items-center gap-2">
         <Sparkles className="w-4 h-4 text-blue-600" />
