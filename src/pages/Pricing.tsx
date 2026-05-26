@@ -12,6 +12,7 @@ import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useSubscription } from "@/hooks/useSubscription";
 import { getPendingCheckout, setPendingCheckout, clearPendingCheckout } from "@/lib/pendingCheckout";
 import { openRazorpayCheckout } from "@/lib/razorpay";
+import { waitForActivePlan } from "@/lib/waitForUpgrade";
 import { toast } from "sonner";
 
 function PriceDisplay({ plan, cycle }: { plan: Plan; cycle: BillingCycle }) {
@@ -56,11 +57,13 @@ export default function Pricing() {
       planKey,
       userEmail: user.email ?? undefined,
       userName: profile?.full_name ?? undefined,
-      onSuccess: async () => {
-        toast.success(`${planName} activated ✨`);
+      onSuccess: async (result) => {
+        const expected = (result?.tier === "elite" ? "elite" : "pro") as "pro" | "elite";
+        if (user) await waitForActivePlan(user.id, expected);
         await Promise.all([refreshProfile(), refresh()]);
+        toast.success(`${planName} activated ✨`);
         setLoadingPlan(null);
-        navigate("/billing?success=1");
+        navigate("/app?upgraded=1", { replace: true });
       },
       onDismiss: () => setLoadingPlan(null),
       onError: (e) => { toast.error(e.message); setLoadingPlan(null); },
