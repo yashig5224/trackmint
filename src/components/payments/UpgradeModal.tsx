@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PLANS } from "@/lib/plans";
 import { setPendingCheckout } from "@/lib/pendingCheckout";
 import { openRazorpayCheckout } from "@/lib/razorpay";
+import { waitForActivePlan } from "@/lib/waitForUpgrade";
 import { toast } from "sonner";
 
 interface Props {
@@ -54,12 +55,14 @@ export function UpgradeModal({ open, onOpenChange, feature, tier = "pro" }: Prop
       planKey,
       userEmail: user.email ?? undefined,
       userName: profile?.full_name ?? undefined,
-      onSuccess: async () => {
-        toast.success(`${plan.name} activated ✨`);
+      onSuccess: async (result) => {
+        const expected = (result?.tier === "elite" ? "elite" : "pro") as "pro" | "elite";
+        await waitForActivePlan(user.id, expected);
         await refreshProfile();
+        toast.success(`${plan.name} activated ✨`);
         setLoading(false);
         onOpenChange(false);
-        navigate("/billing?success=1");
+        navigate("/app?upgraded=1", { replace: true });
       },
       onDismiss: () => setLoading(false),
       onError: (e) => { toast.error(e.message); setLoading(false); },
