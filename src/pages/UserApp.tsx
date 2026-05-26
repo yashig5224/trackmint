@@ -156,6 +156,15 @@ const UserApp = () => {
           <Link to="/coach" className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-gray-600 hover:bg-gradient-to-r hover:from-purple-50 hover:to-cyan-50 mt-4 border border-dashed border-purple-200">
             <Brain className="w-4 h-4 text-blue-500" /> Lumo AI Coach
           </Link>
+          {!isElite && (
+            <button
+              onClick={() => openUpgrade(isPro ? "elite" : "pro")}
+              className="w-full mt-3 flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 shadow-lg shadow-indigo-500/30 hover:opacity-95 transition"
+            >
+              <Crown className="w-4 h-4" />
+              {isPro ? "Upgrade to Elite" : "Upgrade to Pro"}
+            </button>
+          )}
         </nav>
         <button onClick={handleSignOut} className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-500 hover:bg-gray-100">
           <LogOut className="w-4 h-4" /> Sign Out
