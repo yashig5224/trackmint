@@ -13,6 +13,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { getCategoryIcon, NAV_ICONS } from "@/assets/icons";
+import { useSubscription } from "@/hooks/useSubscription";
+import { UpgradeModal } from "@/components/payments/UpgradeModal";
+import { Crown } from "lucide-react";
 
 type Tab = "overview" | "transactions" | "goals" | "reports" | "settings";
 
@@ -53,6 +56,10 @@ const UserApp = () => {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [showTxForm, setShowTxForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeTier, setUpgradeTier] = useState<"pro" | "elite">("pro");
+  const { tier, isPro, isElite } = useSubscription();
+  const openUpgrade = (t: "pro" | "elite" = "pro") => { setUpgradeTier(t); setUpgradeOpen(true); };
 
   const currency = profile?.currency || "INR";
 
@@ -149,6 +156,15 @@ const UserApp = () => {
           <Link to="/coach" className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-gray-600 hover:bg-gradient-to-r hover:from-purple-50 hover:to-cyan-50 mt-4 border border-dashed border-purple-200">
             <Brain className="w-4 h-4 text-blue-500" /> Lumo AI Coach
           </Link>
+          {!isElite && (
+            <button
+              onClick={() => openUpgrade(isPro ? "elite" : "pro")}
+              className="w-full mt-3 flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 shadow-lg shadow-indigo-500/30 hover:opacity-95 transition"
+            >
+              <Crown className="w-4 h-4" />
+              {isPro ? "Upgrade to Elite" : "Upgrade to Pro"}
+            </button>
+          )}
         </nav>
         <button onClick={handleSignOut} className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-500 hover:bg-gray-100">
           <LogOut className="w-4 h-4" /> Sign Out
@@ -167,6 +183,17 @@ const UserApp = () => {
               <div className="px-3 py-1.5 rounded-full bg-white border border-gray-100 text-xs font-semibold text-gray-700 shadow-sm">
                 Lvl {profile?.level ?? 1} • {profile?.xp ?? 0} XP
               </div>
+              <div className={`px-3 py-1.5 rounded-full text-xs font-bold shadow-sm border ${isElite ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white border-transparent" : isPro ? "bg-gradient-to-r from-indigo-500 to-blue-500 text-white border-transparent" : "bg-white text-gray-600 border-gray-200"}`}>
+                {isElite ? "Elite AI+" : isPro ? "Pro AI" : "Free"}
+              </div>
+              {!isElite && (
+                <button
+                  onClick={() => openUpgrade(isPro ? "elite" : "pro")}
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 shadow-md shadow-indigo-500/30 hover:opacity-95"
+                >
+                  <Crown className="w-3.5 h-3.5" /> {isPro ? "Go Elite" : "Upgrade"}
+                </button>
+              )}
             </div>
           </div>
         </header>
@@ -176,7 +203,7 @@ const UserApp = () => {
             <AnimatePresence mode="wait">
               <motion.div key={tab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
                 {tab === "overview" && (
-                  <Overview stats={stats} insights={insights} trendData={trendData} categoryData={categoryData} currency={currency} persona={profile?.selected_persona} />
+                  <Overview stats={stats} insights={insights} trendData={trendData} categoryData={categoryData} currency={currency} persona={profile?.selected_persona} tier={tier} onUpgrade={() => openUpgrade(isPro ? "elite" : "pro")} />
                 )}
                 {tab === "transactions" && (
                   <Transactions
@@ -261,6 +288,8 @@ const UserApp = () => {
           }} />
         )}
       </AnimatePresence>
+
+      <UpgradeModal open={upgradeOpen} onOpenChange={setUpgradeOpen} tier={upgradeTier} />
     </div>
   );
 };
@@ -282,8 +311,35 @@ const StatCard = ({ label, value, change, positive, Icon }: { label: string; val
   </motion.div>
 );
 
-const Overview = ({ stats, insights, trendData, categoryData, currency, persona }: any) => (
+const Overview = ({ stats, insights, trendData, categoryData, currency, persona, tier, onUpgrade }: any) => (
   <div className="space-y-6">
+    {tier !== "elite" && (
+      <motion.button
+        onClick={onUpgrade}
+        whileHover={{ y: -2 }}
+        className="w-full text-left relative overflow-hidden rounded-3xl p-5 bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 text-white shadow-xl shadow-indigo-500/30 group"
+      >
+        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/20 blur-3xl" />
+        <div className="flex items-center justify-between gap-4 relative">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
+              <Crown className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-display text-lg font-bold leading-tight">
+                {tier === "pro" ? "Unlock Elite AI+" : "Upgrade to Pro AI"}
+              </p>
+              <p className="text-xs text-white/80">
+                {tier === "pro" ? "Multi-AI routing, Voice Coach & investment forecasting." : "Unlimited AI chats, smart insights, exports & more."}
+              </p>
+            </div>
+          </div>
+          <div className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/15 backdrop-blur text-sm font-semibold group-hover:bg-white/25 transition">
+            Upgrade <Sparkles className="w-4 h-4" />
+          </div>
+        </div>
+      </motion.button>
+    )}
     {persona && (
       <div className="px-4 py-3 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-100 text-sm flex items-center gap-2">
         <Sparkles className="w-4 h-4 text-blue-600" />
