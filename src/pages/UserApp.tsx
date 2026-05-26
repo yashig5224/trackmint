@@ -56,6 +56,10 @@ const UserApp = () => {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [showTxForm, setShowTxForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeTier, setUpgradeTier] = useState<"pro" | "elite">("pro");
+  const { tier, isPro, isElite } = useSubscription();
+  const openUpgrade = (t: "pro" | "elite" = "pro") => { setUpgradeTier(t); setUpgradeOpen(true); };
 
   const currency = profile?.currency || "INR";
 
