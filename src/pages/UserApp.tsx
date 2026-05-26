@@ -288,6 +288,8 @@ const UserApp = () => {
           }} />
         )}
       </AnimatePresence>
+
+      <UpgradeModal open={upgradeOpen} onOpenChange={setUpgradeOpen} tier={upgradeTier} />
     </div>
   );
 };
