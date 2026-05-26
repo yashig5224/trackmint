@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { getCategoryIcon, NAV_ICONS } from "@/assets/icons";
 import { useSubscription } from "@/hooks/useSubscription";
 import { UpgradeModal } from "@/components/payments/UpgradeModal";
-import { Crown, Zap } from "lucide-react";
+import { Crown } from "lucide-react";
 
 type Tab = "overview" | "transactions" | "goals" | "reports" | "settings";
 
