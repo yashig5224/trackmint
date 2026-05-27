@@ -1008,7 +1008,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
                     transition={{ duration: 1.6, repeat: Infinity }}
                     className="text-sm font-medium bg-gradient-to-r from-indigo-600 via-violet-500 to-sky-500 bg-clip-text text-transparent"
                   >
-                    Lumo AI is analyzing your finances…
+                    {isElite ? "Routing across GPT · Gemini · Claude…" : isPro ? "Running advanced financial analysis…" : "Lumo AI is analyzing your finances…"}
                   </motion.span>
                 </div>
               </motion.div>
