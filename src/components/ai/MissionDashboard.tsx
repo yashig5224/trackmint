@@ -667,7 +667,112 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Plan badge */}
+            <div className={`hidden md:flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold backdrop-blur-xl border shadow-sm ${
+              isElite ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white border-transparent" :
+              isPro   ? "bg-gradient-to-r from-indigo-500 to-sky-500 text-white border-transparent" :
+                        "bg-white/70 text-slate-600 border-white"
+            }`}>
+              {isElite ? <Crown className="w-3.5 h-3.5" /> : isPro ? <Zap className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
+              {isElite ? "Elite AI+" : isPro ? "Pro AI" : "Free"}
+            </div>
+
+            {/* AI model selector */}
+            <div className="relative">
+              <button
+                onClick={() => setModelMenuOpen((v) => !v)}
+                className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/70 border border-white backdrop-blur-xl text-xs font-semibold text-slate-700 hover:bg-white shadow-sm transition-all"
+              >
+                <span className="w-2 h-2 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]" />
+                {activeModel.vendor}
+                <span className="hidden lg:inline text-slate-400 font-normal">· {activeModel.specialty}</span>
+                <ChevronDown className="w-3 h-3 text-slate-400" />
+              </button>
+              <AnimatePresence>
+                {modelMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -6, scale: 0.96 }}
+                    transition={{ duration: 0.18 }}
+                    className="absolute right-0 mt-2 w-72 p-2 rounded-2xl bg-white/95 backdrop-blur-2xl border border-white shadow-[0_20px_60px_-20px_rgba(15,23,42,0.25)] z-50"
+                  >
+                    <p className="px-2.5 pt-1.5 pb-2 text-[10px] uppercase tracking-widest font-bold text-slate-400">AI Engine</p>
+                    {AI_MODELS.map((m) => {
+                      const locked = tierRank[tier] < tierRank[m.minTier];
+                      const active = m.id === selectedModel;
+                      return (
+                        <button
+                          key={m.id}
+                          onClick={() => {
+                            if (locked) {
+                              setModelMenuOpen(false);
+                              openUpgrade(m.minTier === "elite" ? "elite" : "pro", `${m.vendor} model`);
+                              return;
+                            }
+                            setSelectedModel(m.id);
+                            setModelMenuOpen(false);
+                            toast.success(`Switched to ${m.label}`);
+                          }}
+                          className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-left transition-all ${
+                            active ? "bg-gradient-to-r from-indigo-50 via-violet-50 to-sky-50 ring-1 ring-indigo-200" : "hover:bg-slate-50"
+                          } ${locked ? "opacity-70" : ""}`}
+                        >
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-[11px] font-bold shadow ${
+                            m.vendor === "Lumo" ? "bg-gradient-to-br from-slate-700 to-slate-900" :
+                            m.vendor === "GPT" ? "bg-gradient-to-br from-emerald-500 to-teal-600" :
+                            m.vendor === "Gemini" ? "bg-gradient-to-br from-sky-500 to-indigo-600" :
+                            "bg-gradient-to-br from-orange-500 to-rose-600"
+                          }`}>{m.vendor[0]}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-sm font-semibold text-slate-800 truncate">{m.label}</p>
+                              {locked && <Lock className="w-3 h-3 text-slate-400" />}
+                              {active && !locked && <Check className="w-3.5 h-3.5 text-indigo-500" />}
+                            </div>
+                            <p className="text-[11px] text-slate-500">{m.specialty} · {m.speed}{locked ? ` · ${m.minTier === "elite" ? "Elite" : "Pro"}` : ""}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Usage meter (free only) */}
+            {tier === "free" && (
+              <button
+                onClick={() => openUpgrade("pro", "Unlimited AI chats")}
+                className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/70 border border-white backdrop-blur-xl shadow-sm hover:bg-white transition-all"
+                title="Daily AI usage"
+              >
+                <div className="relative w-7 h-7">
+                  <svg viewBox="0 0 32 32" className="w-7 h-7 -rotate-90">
+                    <circle cx="16" cy="16" r="13" fill="none" stroke="hsl(220 14% 92%)" strokeWidth="4" />
+                    <circle cx="16" cy="16" r="13" fill="none"
+                      stroke={limitReached ? "hsl(0 84% 60%)" : "url(#usageGrad)"}
+                      strokeWidth="4" strokeLinecap="round"
+                      strokeDasharray={`${(usage.used / usage.limit) * 81.68} 81.68`} />
+                    <defs>
+                      <linearGradient id="usageGrad" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="hsl(238 84% 60%)" />
+                        <stop offset="100%" stopColor="hsl(199 89% 55%)" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <p className="text-[9px] text-slate-400 uppercase font-bold tracking-wider leading-none">AI Today</p>
+                  <p className={`text-xs font-bold leading-none mt-1 ${limitReached ? "text-rose-600" : "text-slate-800"}`}>
+                    {usage.used}/{usage.limit}
+                  </p>
+                </div>
+              </button>
+            )}
+
+
             <div className="glass-card bg-white/60 border-white px-4 py-2 rounded-2xl flex items-center gap-3">
               <div className="flex items-center gap-1.5">
                 <span className="text-lg">🔥</span>
