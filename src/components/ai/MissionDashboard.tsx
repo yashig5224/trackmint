@@ -279,6 +279,30 @@ const autoTitle = (msg: string) => {
 
 const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
   const accentColor = `hsl(${persona.accentHsl})`;
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { tier, isPro, isElite } = useSubscription();
+
+  // ── Plan-aware AI usage limiter (free only) ───────────────────────────────
+  const [usage, setUsage] = useState(() => getAiUsage());
+  const refreshUsage = () => setUsage(getAiUsage());
+  const limitReached = tier === "free" && usage.remaining <= 0;
+
+  // ── Upgrade modal ─────────────────────────────────────────────────────────
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeTier, setUpgradeTier] = useState<"pro" | "elite">("pro");
+  const [upgradeFeature, setUpgradeFeature] = useState<string | undefined>();
+  const openUpgrade = (t: "pro" | "elite" = "pro", feature?: string) => {
+    if (!user) { navigate("/pricing"); return; }
+    setUpgradeTier(t); setUpgradeFeature(feature); setUpgradeOpen(true);
+  };
+
+  // ── AI model selector (plan-gated) ────────────────────────────────────────
+  const [selectedModel, setSelectedModel] = useState<string>("lumo");
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
+  const activeModel = AI_MODELS.find((m) => m.id === selectedModel) ?? AI_MODELS[0];
+
+
 
   const greetingMsg = (): Message => ({
     id: 0,
