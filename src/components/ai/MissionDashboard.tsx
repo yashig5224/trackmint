@@ -409,6 +409,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
 
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const nextId = useRef(1);
 
