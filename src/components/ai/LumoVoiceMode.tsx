@@ -139,8 +139,8 @@ const LumoVoiceMode = ({ open, onClose, tier, persona, selectedModel, onTranscri
 
   const askLumo = useCallback(async (userText: string) => {
     setState("thinking");
-    // Mirror into parent chat for unified history
-    onTranscript?.(userText);
+    // Note: in elite mode we keep the voice conversation self-contained
+    // so we don't double-fire the parent's sendMessage (which also calls ai-router).
 
     const history = [
       ...seedHistory.slice(-6),
