@@ -298,7 +298,7 @@ const LumoVoiceMode = ({ open, onClose, tier, persona, selectedModel, onTranscri
   const voices = useMemo(() => {
     if (typeof window === "undefined" || !window.speechSynthesis) return [] as SpeechSynthesisVoice[];
     return window.speechSynthesis.getVoices().filter((voice) => /en/i.test(voice.lang));
-  }, [voicesReady, settingsOpen]);
+  }, [voicesReady]);
 
   const cleanupMic = useCallback(() => {
     if (visualizerFrameRef.current) cancelAnimationFrame(visualizerFrameRef.current);
@@ -349,7 +349,8 @@ const LumoVoiceMode = ({ open, onClose, tier, persona, selectedModel, onTranscri
 
   const startVisualizer = useCallback((stream: MediaStream) => {
     cleanupMic();
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    const audioWindow = window as Window & { webkitAudioContext?: typeof AudioContext };
+    const AudioContextClass = window.AudioContext || audioWindow.webkitAudioContext;
     if (!AudioContextClass) return;
 
     const ctx = new AudioContextClass();
