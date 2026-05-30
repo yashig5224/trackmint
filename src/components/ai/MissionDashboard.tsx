@@ -269,7 +269,11 @@ const loadThreads = (): Thread[] => {
 };
 
 const saveThreads = (t: Thread[]) => {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(t)); } catch {}
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(t));
+  } catch {
+    // Thread persistence is best-effort; chat still works if storage is unavailable.
+  }
 };
 
 const autoTitle = (msg: string) => {
@@ -503,7 +507,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
       setIsTyping(false);
       setMessages((prev) => [...prev, aiMsg]);
       streamInto(id, aiText);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("ai-router error", e);
       const id = nextId.current++;
       const fallback = libReply?.text ?? "I hit a hiccup reaching the AI engines. Try again in a moment.";
@@ -1155,7 +1159,6 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
         persona={{ id: persona.id, name: persona.name }}
         selectedModel={selectedModel}
         seedHistory={messages.slice(-6).map((m) => ({ role: m.role, text: m.fullText || m.text }))}
-        onTranscript={(text) => sendMessage(text)}
       />
     </motion.div>
 

@@ -1,17 +1,71 @@
-// Lumo Voice AI — fullscreen futuristic voice assistant.
-// Pro tier: voice-to-text only (transcript sent back to chat).
-// Elite tier: full conversational mode with spoken AI replies via TTS.
-// Uses the browser Web Speech API (SpeechRecognition + speechSynthesis) — no extra keys.
+// Lumo Voice AI — production voice assistant lifecycle.
+// Browser STT + browser TTS, routed through the server-side ai-router.
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, X, Volume2, VolumeX, Settings2, Sparkles, Loader2, MessageSquare } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  AlertTriangle,
+  Brain,
+  Clock3,
+  Crown,
+  Loader2,
+  Lock,
+  Mic,
+  MicOff,
+  MessageSquare,
+  Radio,
+  RefreshCw,
+  Settings2,
+  Sparkles,
+  Volume2,
+  VolumeX,
+  Waves,
+  X,
+  Zap,
+} from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import type { PlanTier } from "@/hooks/useSubscription";
+import { lumoAvatar } from "@/assets/personas";
 
-type Turn = { role: "user" | "ai"; text: string; id: number };
-type VoiceState = "idle" | "listening" | "thinking" | "speaking";
+export type VoiceState = "idle" | "listening" | "processing" | "speaking" | "error";
+
+type SpeechRecognitionResultLike = { isFinal: boolean; 0?: { transcript?: string } };
+type SpeechRecognitionEventLike = { resultIndex: number; results: { length: number; [index: number]: SpeechRecognitionResultLike } };
+type SpeechRecognitionErrorLike = { error?: string };
+type RecognitionLike = {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  maxAlternatives: number;
+  onstart: (() => void) | null;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onspeechend: (() => void) | null;
+  onerror: ((event: SpeechRecognitionErrorLike) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+  abort?: () => void;
+};
+type VoiceRole = "user" | "ai";
+
+type Turn = {
+  id: number;
+  role: VoiceRole;
+  text: string;
+  timestamp: number;
+  provider?: string;
+  providerLabel?: string;
+  model?: string;
+  latencyMs?: number;
+  tokens?: number | null;
+};
+
+type VoiceError = {
+  title: string;
+  detail: string;
+  hint?: string;
+};
 
 interface Props {
   open: boolean;
@@ -19,44 +73,89 @@ interface Props {
   tier: PlanTier;
   persona: { id: string; name: string };
   selectedModel: string;
-  // When the user finishes a voice utterance, also push it into the parent chat.
   onTranscript?: (text: string) => void;
-  // Initial chat history (last few turns) to give the voice convo context.
   seedHistory?: { role: "user" | "ai"; text: string }[];
 }
 
-// Minimal typings for the browser Speech API
-type AnyRecognition = any;
+const lumoVoiceProfile = {
+  name: "Lumo",
+  avatar: lumoAvatar || "/lumo-avatar.png",
+  voiceType: "warm-ai",
+  accent: "neutral",
+  animationMode: "reactive",
+};
 
-function getRecognition(): AnyRecognition | null {
-  if (typeof window === "undefined") return null;
-  const Ctor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-  if (!Ctor) return null;
-  const r = new Ctor();
-  r.lang = "en-US";
-  r.interimResults = true;
-  r.continuous = false;
-  return r;
+const PRO_DAILY_VOICE_SECONDS = 10 * 60;
+const VOICE_USAGE_KEY = "lumo_voice_usage_v2";
+
+const providerGlow: Record<string, string> = {
+  lumo: "from-[hsl(228_88%_66%)] via-[hsl(266_86%_70%)] to-[hsl(196_86%_62%)]",
+  gpt: "from-[hsl(158_70%_44%)] via-[hsl(178_70%_42%)] to-[hsl(205_83%_56%)]",
+  gemini: "from-[hsl(198_90%_58%)] via-[hsl(232_84%_64%)] to-[hsl(267_82%_68%)]",
+  claude: "from-[hsl(24_90%_62%)] via-[hsl(344_84%_64%)] to-[hsl(266_78%_68%)]",
+};
+
+const modelLabels: Record<string, string> = {
+  auto: "Auto Router",
+  lumo: "Lumo Core",
+  gpt: "GPT-class",
+  gemini: "Gemini Pro",
+  claude: "Claude Sonnet",
+};
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
 }
 
-function pickVoice(preferredName?: string): SpeechSynthesisVoice | undefined {
-  if (typeof window === "undefined" || !window.speechSynthesis) return undefined;
-  const voices = window.speechSynthesis.getVoices();
-  if (!voices?.length) return undefined;
-  if (preferredName) {
-    const m = voices.find((v) => v.name === preferredName);
-    if (m) return m;
+function formatClock(ts: number) {
+  return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(new Date(ts));
+}
+
+function readVoiceUsage() {
+  try {
+    const raw = localStorage.getItem(VOICE_USAGE_KEY);
+    if (!raw) return { date: todayKey(), seconds: 0 };
+    const parsed = JSON.parse(raw) as { date?: string; seconds?: number };
+    if (parsed.date !== todayKey()) return { date: todayKey(), seconds: 0 };
+    return { date: todayKey(), seconds: Math.max(0, Number(parsed.seconds || 0)) };
+  } catch {
+    return { date: todayKey(), seconds: 0 };
   }
-  // Prefer a premium-sounding English voice
-  return (
-    voices.find((v) => /en-(US|GB)/i.test(v.lang) && /(Google|Samantha|Aria|Jenny|Natasha)/i.test(v.name)) ||
-    voices.find((v) => /en-(US|GB)/i.test(v.lang)) ||
-    voices[0]
-  );
 }
 
-function stripMarkdown(s: string): string {
-  return s
+function saveVoiceUsage(next: { date: string; seconds: number }) {
+  try {
+    localStorage.setItem(VOICE_USAGE_KEY, JSON.stringify(next));
+  } catch {
+    // Storage can be unavailable in private browsing; voice still works.
+  }
+}
+
+function secondsToLabel(seconds: number) {
+  const safe = Math.max(0, Math.floor(seconds));
+  const m = Math.floor(safe / 60);
+  const s = safe % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function getRecognition(): RecognitionLike | null {
+  if (typeof window === "undefined") return null;
+  const speechWindow = window as Window & {
+    SpeechRecognition?: new () => RecognitionLike;
+    webkitSpeechRecognition?: new () => RecognitionLike;
+  };
+  const SpeechRecognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
+  if (!SpeechRecognition) return null;
+  const recognition = new SpeechRecognition();
+  recognition.lang = "en-US";
+  recognition.interimResults = true;
+  recognition.continuous = false;
+  recognition.maxAlternatives = 1;
+  return recognition;
+}
+
+function stripMarkdown(value: string) {
+  return value
     .replace(/```[\s\S]*?```/g, " ")
     .replace(/`[^`]*`/g, "")
     .replace(/[#>*_~]/g, "")
@@ -65,86 +164,281 @@ function stripMarkdown(s: string): string {
     .trim();
 }
 
+function pickWarmVoice(preferredName?: string): SpeechSynthesisVoice | undefined {
+  if (typeof window === "undefined" || !window.speechSynthesis) return undefined;
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices.length) return undefined;
+  if (preferredName) {
+    const preferred = voices.find((voice) => voice.name === preferredName);
+    if (preferred) return preferred;
+  }
+
+  return (
+    voices.find((voice) => /en-(US|GB|IN)/i.test(voice.lang) && /(Samantha|Jenny|Aria|Natasha|Serena|Matilda|Google)/i.test(voice.name)) ||
+    voices.find((voice) => /en-(US|GB|IN)/i.test(voice.lang)) ||
+    voices[0]
+  );
+}
+
+function errorFromSpeech(error?: string): VoiceError {
+  if (error === "not-allowed" || error === "service-not-allowed") {
+    return {
+      title: "Microphone access required for Voice AI.",
+      detail: "Lumo needs microphone permission before it can listen.",
+      hint: "Allow microphone access in your browser settings, then retry.",
+    };
+  }
+  if (error === "audio-capture") {
+    return {
+      title: "No microphone found.",
+      detail: "Connect or enable a microphone to start a voice session.",
+      hint: "Check your input device and system privacy settings.",
+    };
+  }
+  if (error === "no-speech") {
+    return {
+      title: "I didn’t catch that.",
+      detail: "Try speaking a little closer to the microphone.",
+      hint: "Tap retry when you’re ready.",
+    };
+  }
+  return {
+    title: "Voice session interrupted.",
+    detail: "Something disrupted the microphone session.",
+    hint: "Retry the session — Lumo will reset safely.",
+  };
+}
+
 const LumoVoiceMode = ({ open, onClose, tier, persona, selectedModel, onTranscript, seedHistory = [] }: Props) => {
+  const canUseVoice = tier === "pro" || tier === "elite";
   const isElite = tier === "elite";
-  const canUse = tier === "pro" || tier === "elite";
+  const isPro = tier === "pro";
 
-  const [state, setState] = useState<VoiceState>("idle");
-  const [transcript, setTranscript] = useState("");
-  const [partial, setPartial] = useState("");
+  const [voiceState, setVoiceState] = useState<VoiceState>("idle");
+  const [partialTranscript, setPartialTranscript] = useState("");
+  const [finalTranscript, setFinalTranscript] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
-  const [voicesReady, setVoicesReady] = useState(false);
-  const [selectedVoiceName, setSelectedVoiceName] = useState<string | undefined>(undefined);
-  const [rate, setRate] = useState(1.0);
-  const [autoSpeak, setAutoSpeak] = useState(isElite);
-  const [amplitude, setAmplitude] = useState(0.4);
+  const [voiceError, setVoiceError] = useState<VoiceError | null>(null);
+  const [level, setLevel] = useState(0.22);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [voiceReplies, setVoiceReplies] = useState(true);
+  const [continuousMode, setContinuousMode] = useState(false);
+  const [selectedVoiceName, setSelectedVoiceName] = useState<string | undefined>();
+  const [speechRate, setSpeechRate] = useState(1);
+  const [voicesReady, setVoicesReady] = useState(false);
+  const [avatarBroken, setAvatarBroken] = useState(false);
+  const [routerMeta, setRouterMeta] = useState({
+    provider: selectedModel === "auto" ? "lumo" : selectedModel,
+    providerLabel: modelLabels[selectedModel] || "Lumo Router",
+    model: "Server routed",
+    latencyMs: undefined as number | undefined,
+    tokens: undefined as number | undefined,
+  });
+  const [voiceUsage, setVoiceUsage] = useState(() => readVoiceUsage());
 
-  const recRef = useRef<AnyRecognition | null>(null);
+  const recognitionRef = useRef<RecognitionLike | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const visualizerFrameRef = useRef<number | null>(null);
+  const finalTranscriptRef = useRef("");
   const nextId = useRef(1);
   const turnsRef = useRef<Turn[]>([]);
+  const stateRef = useRef<VoiceState>("idle");
+  const openRef = useRef(open);
+  const continuousRef = useRef(continuousMode);
+  const voiceRepliesRef = useRef(voiceReplies);
+  const selectedVoiceRef = useRef(selectedVoiceName);
+  const speechRateRef = useRef(speechRate);
+  const speechGenerationRef = useRef(0);
+  const startListeningRef = useRef<() => void>(() => undefined);
+
   turnsRef.current = turns;
+  stateRef.current = voiceState;
+  openRef.current = open;
+  continuousRef.current = continuousMode;
+  voiceRepliesRef.current = voiceReplies;
+  selectedVoiceRef.current = selectedVoiceName;
+  speechRateRef.current = speechRate;
 
-  // Load voices (async on some browsers)
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
-    const update = () => {
-      const v = window.speechSynthesis.getVoices();
-      setVoicesReady(v.length > 0);
-      if (!selectedVoiceName) {
-        const picked = pickVoice();
-        if (picked) setSelectedVoiceName(picked.name);
-      }
-    };
-    update();
-    window.speechSynthesis.onvoiceschanged = update;
-    return () => { try { window.speechSynthesis.onvoiceschanged = null as any; } catch {} };
-  }, [selectedVoiceName]);
+  const proRemainingSeconds = Math.max(0, PRO_DAILY_VOICE_SECONDS - voiceUsage.seconds);
+  const activeProvider = routerMeta.provider || "lumo";
+  const glowClass = providerGlow[activeProvider] || providerGlow.lumo;
+  const isActive = voiceState === "listening" || voiceState === "processing" || voiceState === "speaking";
 
-  // Synthetic amplitude animator (since we don't analyse mic frequency to keep this minimal)
-  useEffect(() => {
-    let raf = 0;
-    let t = 0;
-    const tick = () => {
-      t += 0.08;
-      const base = state === "listening" ? 0.55 : state === "speaking" ? 0.75 : state === "thinking" ? 0.45 : 0.3;
-      const wobble = Math.sin(t) * 0.15 + Math.sin(t * 2.3) * 0.08;
-      setAmplitude(Math.max(0.15, base + wobble));
-      raf = requestAnimationFrame(tick);
-    };
-    if (open) raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [open, state]);
+  const usagePercent = isElite
+    ? 100
+    : isPro
+      ? Math.min(100, (voiceUsage.seconds / PRO_DAILY_VOICE_SECONDS) * 100)
+      : 0;
 
-  const stopSpeaking = useCallback(() => {
-    try { window.speechSynthesis?.cancel(); } catch {}
+  const stateCopy = useMemo(() => {
+    if (!canUseVoice) {
+      return {
+        label: "Voice AI is locked",
+        caption: "Upgrade to Pro to talk with Lumo.",
+        helper: "Text chat remains available on Free.",
+      };
+    }
+    if (voiceState === "listening") {
+      return { label: "I’m listening…", caption: partialTranscript || finalTranscript || "Tell me what you want to improve.", helper: "Speak naturally — I’ll analyze it when you pause." };
+    }
+    if (voiceState === "processing") {
+      return { label: "Analyzing your finances…", caption: "Routing your voice prompt through Lumo’s AI engines.", helper: `${routerMeta.providerLabel} is preparing a plan.` };
+    }
+    if (voiceState === "speaking") {
+      return { label: "Here’s a smarter plan…", caption: "Lumo is speaking your response.", helper: "Tap the orb to stop the voice reply." };
+    }
+    if (voiceState === "error") {
+      return { label: voiceError?.title || "Voice needs attention", caption: voiceError?.detail || "The session reset safely.", helper: voiceError?.hint || "Tap retry to start again." };
+    }
+    return { label: "Tap to speak", caption: isElite ? "Start a live financial conversation." : "Use your Pro voice minutes with Lumo.", helper: continuousMode ? "Continuous Conversation is on." : "Ask about budgets, spending, goals, or investments." };
+  }, [canUseVoice, voiceState, partialTranscript, finalTranscript, routerMeta.providerLabel, voiceError, isElite, continuousMode]);
+
+  const voices = typeof window !== "undefined" && window.speechSynthesis
+    ? window.speechSynthesis.getVoices().filter((voice) => /en/i.test(voice.lang))
+    : [];
+
+  const cleanupMic = useCallback(() => {
+    if (visualizerFrameRef.current) cancelAnimationFrame(visualizerFrameRef.current);
+    visualizerFrameRef.current = null;
+    analyserRef.current = null;
+    try {
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+    } catch {
+      // no-op
+    }
+    mediaStreamRef.current = null;
+    try {
+      audioContextRef.current?.close();
+    } catch {
+      // no-op
+    }
+    audioContextRef.current = null;
   }, []);
 
-  const speak = useCallback((text: string) => {
-    if (!isElite || !autoSpeak) return;
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
-    stopSpeaking();
-    const clean = stripMarkdown(text).slice(0, 600);
-    if (!clean) return;
-    const u = new SpeechSynthesisUtterance(clean);
-    const voice = pickVoice(selectedVoiceName);
-    if (voice) u.voice = voice;
-    u.rate = rate;
-    u.pitch = 1;
-    u.onstart = () => setState("speaking");
-    u.onend = () => setState((s) => (s === "speaking" ? "idle" : s));
-    u.onerror = () => setState("idle");
-    window.speechSynthesis.speak(u);
-  }, [isElite, autoSpeak, selectedVoiceName, rate, stopSpeaking]);
+  const stopSpeech = useCallback(() => {
+    speechGenerationRef.current += 1;
+    try {
+      window.speechSynthesis?.cancel();
+    } catch {
+      // no-op
+    }
+  }, []);
+
+  const resetSession = useCallback((nextState: VoiceState = "idle") => {
+    try {
+      recognitionRef.current?.abort?.();
+    } catch {
+      // no-op
+    }
+    recognitionRef.current = null;
+    cleanupMic();
+    stopSpeech();
+    finalTranscriptRef.current = "";
+    setPartialTranscript("");
+    setFinalTranscript("");
+    setVoiceState(nextState);
+  }, [cleanupMic, stopSpeech]);
+
+  const setSafeError = useCallback((error: VoiceError) => {
+    resetSession("error");
+    setVoiceError(error);
+  }, [resetSession]);
+
+  const startVisualizer = useCallback((stream: MediaStream) => {
+    cleanupMic();
+    const audioWindow = window as Window & { webkitAudioContext?: typeof AudioContext };
+    const AudioContextClass = window.AudioContext || audioWindow.webkitAudioContext;
+    if (!AudioContextClass) return;
+
+    const ctx = new AudioContextClass();
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 256;
+    const source = ctx.createMediaStreamSource(stream);
+    source.connect(analyser);
+    audioContextRef.current = ctx;
+    analyserRef.current = analyser;
+    mediaStreamRef.current = stream;
+  }, [cleanupMic]);
+
+  const scheduleContinuousListen = useCallback(() => {
+    if (!openRef.current || !continuousRef.current || !isElite) return;
+    window.setTimeout(() => {
+      if (openRef.current && continuousRef.current && stateRef.current === "idle") {
+        startListeningRef.current?.();
+      }
+    }, 700);
+  }, [isElite]);
+
+  const speakResponse = useCallback((text: string) => {
+    if (!voiceRepliesRef.current) {
+      setVoiceState("idle");
+      scheduleContinuousListen();
+      return;
+    }
+
+    if (typeof window === "undefined" || !window.speechSynthesis || !window.SpeechSynthesisUtterance) {
+      setSafeError({
+        title: "Voice playback is unavailable.",
+        detail: "Your browser cannot play Lumo’s voice response.",
+        hint: "Try Chrome, Edge, or Safari with audio enabled.",
+      });
+      return;
+    }
+
+    const clean = stripMarkdown(text).slice(0, 850);
+    if (!clean) {
+      setVoiceState("idle");
+      scheduleContinuousListen();
+      return;
+    }
+
+    const generation = speechGenerationRef.current + 1;
+    speechGenerationRef.current = generation;
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(clean);
+      const voice = pickWarmVoice(selectedVoiceRef.current);
+      if (voice) utterance.voice = voice;
+      utterance.rate = speechRateRef.current;
+      utterance.pitch = 1.03;
+      utterance.volume = 1;
+      utterance.onstart = () => {
+        if (speechGenerationRef.current !== generation) return;
+        setVoiceState("speaking");
+      };
+      utterance.onend = () => {
+        if (speechGenerationRef.current !== generation) return;
+        setVoiceState("idle");
+        scheduleContinuousListen();
+      };
+      utterance.onerror = () => {
+        if (speechGenerationRef.current !== generation) return;
+        setSafeError({
+          title: "Lumo couldn’t play audio.",
+          detail: "The text response was generated, but voice playback failed.",
+          hint: "Check system audio, then retry.",
+        });
+      };
+      setVoiceState("speaking");
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      setSafeError({
+        title: "Text-to-speech failed.",
+        detail: "Lumo could not start the voice playback session.",
+        hint: "Refresh audio permissions or try another browser.",
+      });
+    }
+  }, [scheduleContinuousListen, setSafeError]);
 
   const askLumo = useCallback(async (userText: string) => {
-    setState("thinking");
-    // Note: in elite mode we keep the voice conversation self-contained
-    // so we don't double-fire the parent's sendMessage (which also calls ai-router).
+    setVoiceState("processing");
+    cleanupMic();
 
-    const history = [
+    const memory = [
       ...seedHistory.slice(-6),
-      ...turnsRef.current.slice(-6).map((t) => ({ role: t.role, text: t.text })),
+      ...turnsRef.current.slice(-8).map((turn) => ({ role: turn.role, text: turn.text })),
     ];
 
     try {
@@ -153,335 +447,633 @@ const LumoVoiceMode = ({ open, onClose, tier, persona, selectedModel, onTranscri
           message: userText,
           model: selectedModel,
           persona,
-          history,
+          history: memory,
+          context: {
+            voiceSession: true,
+            voiceProfile: lumoVoiceProfile,
+            currentGoals: ["reduce waste", "increase savings", "build better financial habits"],
+            financialContext: "Use prior chat turns, active persona, budgets, goals, and recent money questions as conversational memory.",
+          },
         },
       });
+
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      const aiText: string = data?.text || "I'm here. Could you say that again?";
-      const id = nextId.current++;
-      setTurns((p) => [...p, { id, role: "ai", text: aiText }]);
-      if (isElite && autoSpeak) speak(aiText);
-      else setState("idle");
-    } catch (e: any) {
-      console.error("voice ai-router error", e);
-      toast.error("Voice AI couldn't reach Lumo. Try again.");
-      setState("idle");
-    }
-  }, [onTranscript, seedHistory, selectedModel, persona, isElite, autoSpeak, speak]);
 
-  const finishUtterance = useCallback((finalText: string) => {
-    const text = finalText.trim();
-    setPartial("");
-    setTranscript("");
-    if (!text) { setState("idle"); return; }
-    const id = nextId.current++;
-    setTurns((p) => [...p, { id, role: "user", text }]);
-    if (isElite) {
-      askLumo(text);
-    } else {
-      // Pro: voice-input only — just push to parent and close listening state
-      onTranscript?.(text);
-      setState("idle");
-      toast.success("Sent to Lumo");
+      const aiText = String(data?.text || "I’m here with you. Could you repeat that financial question?");
+      const nextMeta = {
+        provider: String(data?.provider || selectedModel || "lumo"),
+        providerLabel: String(data?.providerLabel || modelLabels[selectedModel] || "Lumo Router"),
+        model: String(data?.model || "Server routed"),
+        latencyMs: typeof data?.latencyMs === "number" ? data.latencyMs : undefined,
+        tokens: typeof data?.totalTokens === "number" ? data.totalTokens : undefined,
+      };
+      setRouterMeta(nextMeta);
+      setTurns((previous) => [
+        ...previous,
+        {
+          id: nextId.current++,
+          role: "ai",
+          text: aiText,
+          timestamp: Date.now(),
+          provider: nextMeta.provider,
+          providerLabel: nextMeta.providerLabel,
+          model: nextMeta.model,
+          latencyMs: nextMeta.latencyMs,
+          tokens: nextMeta.tokens,
+        },
+      ]);
+      if (data?.fallbackUsed && data?.providerLabel) {
+        toast(`Voice routed via ${data.providerLabel}`, { duration: 2200 });
+      }
+      speakResponse(aiText);
+    } catch (error: unknown) {
+      console.error("Lumo Voice ai-router error", error);
+      const message = error instanceof Error ? error.message : "The network or AI engine failed during processing.";
+      setSafeError({
+        title: "Lumo couldn’t reach the AI router.",
+        detail: message,
+        hint: "Retry in a moment — your session has been safely reset.",
+      });
     }
-  }, [isElite, askLumo, onTranscript]);
+  }, [cleanupMic, seedHistory, selectedModel, persona, speakResponse, setSafeError]);
 
-  const startListening = useCallback(() => {
-    if (!canUse) return;
-    stopSpeaking();
-    if (recRef.current) { try { recRef.current.stop(); } catch {} }
-    const rec = getRecognition();
-    if (!rec) {
-      toast.error("Voice input isn't supported in this browser. Try Chrome or Edge.");
+  const finishUtterance = useCallback((rawText: string) => {
+    const text = rawText.trim();
+    finalTranscriptRef.current = "";
+    setPartialTranscript("");
+    setFinalTranscript("");
+    cleanupMic();
+
+    if (!text) {
+      setSafeError({
+        title: "I didn’t catch that.",
+        detail: "No clear speech was detected before the session ended.",
+        hint: "Tap retry and speak after the listening glow appears.",
+      });
       return;
     }
-    recRef.current = rec;
-    let finalText = "";
-    rec.onstart = () => setState("listening");
-    rec.onresult = (ev: any) => {
-      let interim = "";
-      for (let i = ev.resultIndex; i < ev.results.length; i++) {
-        const r = ev.results[i];
-        if (r.isFinal) finalText += r[0].transcript;
-        else interim += r[0].transcript;
-      }
-      setPartial(interim);
-      setTranscript(finalText);
-    };
-    rec.onerror = (ev: any) => {
-      console.error("speech error", ev?.error);
-      if (ev?.error === "not-allowed") toast.error("Microphone permission denied.");
-      else if (ev?.error !== "no-speech") toast.error("Voice error — try again.");
-      setState("idle");
-    };
-    rec.onend = () => {
-      finishUtterance(finalText);
-    };
-    try { rec.start(); } catch { }
-  }, [canUse, stopSpeaking, finishUtterance]);
+
+    try {
+      navigator.vibrate?.(12);
+    } catch {
+      // no-op
+    }
+
+    setTurns((previous) => [
+      ...previous,
+      { id: nextId.current++, role: "user", text, timestamp: Date.now() },
+    ]);
+    onTranscript?.(text);
+    askLumo(text);
+  }, [askLumo, cleanupMic, onTranscript, setSafeError]);
+
+  const startListening = useCallback(async () => {
+    setVoiceError(null);
+    setPartialTranscript("");
+    setFinalTranscript("");
+    finalTranscriptRef.current = "";
+
+    if (!canUseVoice) {
+      setSafeError({
+        title: "Voice AI unlocks on Pro.",
+        detail: "Free users can keep using text chat; voice starts with Pro.",
+        hint: "Upgrade to unlock voice minutes and Lumo audio replies.",
+      });
+      return;
+    }
+
+    if (isPro && proRemainingSeconds <= 0) {
+      setSafeError({
+        title: "Pro voice minutes used today.",
+        detail: "Your daily Pro voice allowance is complete.",
+        hint: "Upgrade to Elite for unlimited voice and Continuous Conversation.",
+      });
+      return;
+    }
+
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setSafeError({
+        title: "Microphone is unavailable.",
+        detail: "This device or browser does not expose microphone access.",
+        hint: "Use a modern browser with microphone support.",
+      });
+      return;
+    }
+
+    const recognition = getRecognition();
+    if (!recognition) {
+      setSafeError({
+        title: "Speech recognition isn’t supported.",
+        detail: "Your browser cannot transcribe live speech with the built-in API.",
+        hint: "Try Chrome or Edge for browser speech recognition.",
+      });
+      return;
+    }
+
+    resetSession("idle");
+
+    try {
+      stopSpeech();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
+      startVisualizer(stream);
+
+      recognitionRef.current = recognition;
+      recognition.onstart = () => {
+        setVoiceState("listening");
+        try {
+          navigator.vibrate?.(8);
+        } catch {
+          // no-op
+        }
+      };
+      recognition.onresult = (event: SpeechRecognitionEventLike) => {
+        let interim = "";
+        let finalText = finalTranscriptRef.current;
+        for (let index = event.resultIndex; index < event.results.length; index += 1) {
+          const result = event.results[index];
+          const transcript = result?.[0]?.transcript || "";
+          if (result.isFinal) finalText += transcript;
+          else interim += transcript;
+        }
+        finalTranscriptRef.current = finalText;
+        setFinalTranscript(finalText);
+        setPartialTranscript(interim);
+      };
+      recognition.onspeechend = () => {
+        try {
+          recognition.stop();
+        } catch {
+          // no-op
+        }
+      };
+      recognition.onerror = (event: SpeechRecognitionErrorLike) => {
+        console.error("Lumo Voice recognition error", event?.error);
+        setSafeError(errorFromSpeech(event?.error));
+      };
+      recognition.onend = () => {
+        const text = finalTranscriptRef.current.trim();
+        recognitionRef.current = null;
+        if (stateRef.current === "error") return;
+        finishUtterance(text);
+      };
+      recognition.start();
+    } catch (error: unknown) {
+      console.error("Lumo Voice microphone error", error);
+      const browserError = error instanceof DOMException || error instanceof Error ? error : null;
+      const denied = browserError?.name === "NotAllowedError" || browserError?.name === "SecurityError";
+      setSafeError(denied ? errorFromSpeech("not-allowed") : {
+        title: "Microphone session couldn’t start.",
+        detail: browserError?.message || "Lumo could not activate your input device.",
+        hint: "Check browser permissions and retry.",
+      });
+    }
+  }, [canUseVoice, finishUtterance, isPro, proRemainingSeconds, resetSession, setSafeError, startVisualizer, stopSpeech]);
+
+  startListeningRef.current = startListening;
 
   const stopListening = useCallback(() => {
-    try { recRef.current?.stop(); } catch { }
+    try {
+      recognitionRef.current?.stop?.();
+    } catch {
+      finishUtterance(finalTranscriptRef.current);
+    }
+  }, [finishUtterance]);
+
+  const handleOrbTap = () => {
+    if (voiceState === "listening") {
+      stopListening();
+      return;
+    }
+    if (voiceState === "speaking") {
+      stopSpeech();
+      setVoiceState("idle");
+      scheduleContinuousListen();
+      return;
+    }
+    if (voiceState === "idle" || voiceState === "error") startListening();
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    const updateVoices = () => {
+      const allVoices = window.speechSynthesis.getVoices();
+      setVoicesReady(allVoices.length > 0);
+      if (!selectedVoiceRef.current) {
+        const warm = pickWarmVoice();
+        if (warm) setSelectedVoiceName(warm.name);
+      }
+    };
+    updateVoices();
+    window.speechSynthesis.onvoiceschanged = updateVoices;
+    return () => {
+      try {
+        window.speechSynthesis.onvoiceschanged = null;
+      } catch {
+        // no-op
+      }
+    };
   }, []);
 
-  // Cleanup on close
+  useEffect(() => {
+    let frame = 0;
+    let tick = 0;
+    const buffer = new Uint8Array(128);
+
+    const animate = () => {
+      tick += 0.06;
+      const analyser = analyserRef.current;
+      if (voiceState === "listening" && analyser) {
+        analyser.getByteTimeDomainData(buffer);
+        let sum = 0;
+        for (let index = 0; index < buffer.length; index += 1) {
+          const normalized = (buffer[index] - 128) / 128;
+          sum += normalized * normalized;
+        }
+        const rms = Math.sqrt(sum / buffer.length);
+        setLevel(Math.min(1, Math.max(0.18, rms * 5.5)));
+      } else {
+        const base = voiceState === "speaking" ? 0.68 : voiceState === "processing" ? 0.42 : voiceState === "error" ? 0.32 : 0.24;
+        const wave = Math.sin(tick * (voiceState === "speaking" ? 2.6 : 1.2)) * 0.13 + Math.sin(tick * 4.1) * 0.07;
+        setLevel(Math.max(0.16, Math.min(0.96, base + wave)));
+      }
+      frame = requestAnimationFrame(animate);
+    };
+
+    if (open) frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+  }, [open, voiceState]);
+
+  useEffect(() => {
+    if (!open || !isPro || !isActive) return;
+    const interval = window.setInterval(() => {
+      setVoiceUsage((previous) => {
+        const normalized = previous.date === todayKey() ? previous : { date: todayKey(), seconds: 0 };
+        const next = { date: todayKey(), seconds: Math.min(PRO_DAILY_VOICE_SECONDS, normalized.seconds + 1) };
+        saveVoiceUsage(next);
+        return next;
+      });
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [open, isPro, isActive]);
+
+  useEffect(() => {
+    if (open && isPro && proRemainingSeconds <= 0 && isActive) {
+      setSafeError({
+        title: "Pro voice minutes used today.",
+        detail: "Lumo paused this session because your daily Pro voice time is complete.",
+        hint: "Elite unlocks unlimited Voice AI and Continuous Conversation.",
+      });
+    }
+  }, [open, isPro, proRemainingSeconds, isActive, setSafeError]);
+
   useEffect(() => {
     if (!open) {
-      try { recRef.current?.abort?.(); } catch { }
-      stopSpeaking();
-      setState("idle");
-      setPartial("");
-      setTranscript("");
+      resetSession("idle");
+      setVoiceError(null);
+      setSettingsOpen(false);
+      setContinuousMode(false);
     }
-  }, [open, stopSpeaking]);
+  }, [open, resetSession]);
 
-  const stateLabel = useMemo(() => {
-    if (!canUse) return "Voice AI is an Elite feature";
-    switch (state) {
-      case "listening": return "Listening…";
-      case "thinking": return "Lumo is thinking…";
-      case "speaking": return "Lumo is speaking…";
-      default: return isElite ? "Tap to talk with Lumo" : "Tap to dictate to Lumo";
-    }
-  }, [state, canUse, isElite]);
+  const close = () => {
+    resetSession("idle");
+    onClose();
+  };
 
-  const voices = (typeof window !== "undefined" && window.speechSynthesis?.getVoices()) || [];
+  const bars = Array.from({ length: 34 }, (_, index) => index);
+  const particles = Array.from({ length: 16 }, (_, index) => index);
 
   return (
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[100] flex items-center justify-center"
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[100] overflow-hidden bg-background text-foreground"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
         >
-          {/* Backdrop */}
-          <motion.div
-            className="absolute inset-0 bg-gradient-to-br from-white via-indigo-50/80 to-violet-100/70 backdrop-blur-2xl"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          />
-          {/* Floating ambient blobs */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,hsl(226_95%_88%/0.75),transparent_32%),radial-gradient(circle_at_82%_22%,hsl(284_86%_90%/0.72),transparent_34%),linear-gradient(135deg,hsl(var(--background)),hsl(220_44%_98%),hsl(252_70%_97%))]" />
           <motion.div
             aria-hidden
-            className="absolute -top-32 -left-24 w-[480px] h-[480px] rounded-full bg-indigo-300/40 blur-3xl"
-            animate={{ x: [0, 40, -20, 0], y: [0, 30, -10, 0] }}
-            transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
-          />
-          <motion.div
-            aria-hidden
-            className="absolute -bottom-32 -right-24 w-[520px] h-[520px] rounded-full bg-violet-300/40 blur-3xl"
-            animate={{ x: [0, -30, 20, 0], y: [0, -20, 10, 0] }}
+            className="absolute -left-28 top-10 h-72 w-72 rounded-full bg-[hsl(221_90%_72%/0.28)] blur-3xl"
+            animate={{ x: [0, 44, -12, 0], y: [0, 28, -8, 0], scale: [1, 1.14, 0.98, 1] }}
             transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
           />
+          <motion.div
+            aria-hidden
+            className="absolute -right-24 bottom-10 h-80 w-80 rounded-full bg-[hsl(280_82%_76%/0.28)] blur-3xl"
+            animate={{ x: [0, -36, 18, 0], y: [0, -22, 14, 0], scale: [1, 0.96, 1.16, 1] }}
+            transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+          />
 
-          {/* Top bar */}
-          <div className="absolute top-0 left-0 right-0 px-5 py-4 flex items-center justify-between z-10">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-md">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="text-xs uppercase tracking-widest font-semibold text-indigo-600">Lumo Voice AI</div>
-                <div className="text-[11px] text-slate-500">
-                  {isElite ? "Elite · Live conversation" : tier === "pro" ? "Pro · Voice dictation" : "Locked"}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {isElite && (
-                <button
-                  onClick={() => setAutoSpeak((s) => !s)}
-                  className="w-9 h-9 rounded-xl bg-white/70 border border-white shadow-sm flex items-center justify-center text-slate-600 hover:text-slate-900 transition"
-                  title={autoSpeak ? "Mute voice replies" : "Unmute voice replies"}
-                >
-                  {autoSpeak ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-                </button>
-              )}
-              <button
-                onClick={() => setSettingsOpen((s) => !s)}
-                className="w-9 h-9 rounded-xl bg-white/70 border border-white shadow-sm flex items-center justify-center text-slate-600 hover:text-slate-900 transition"
-                title="Voice settings"
-              >
-                <Settings2 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={onClose}
-                className="w-9 h-9 rounded-xl bg-white/70 border border-white shadow-sm flex items-center justify-center text-slate-600 hover:text-slate-900 transition"
-                title="Close"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Settings panel */}
-          <AnimatePresence>
-            {settingsOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                className="absolute top-16 right-5 z-20 w-80 p-4 rounded-2xl bg-white/90 backdrop-blur border border-white shadow-xl"
-              >
-                <div className="text-sm font-semibold text-slate-900 mb-3">Voice settings</div>
-                <label className="text-xs text-slate-500">Voice</label>
-                <select
-                  value={selectedVoiceName ?? ""}
-                  onChange={(e) => setSelectedVoiceName(e.target.value)}
-                  className="mt-1 w-full text-sm rounded-lg border border-slate-200 bg-white px-2 py-1.5"
-                  disabled={!voicesReady}
-                >
-                  {voices.filter((v) => /en/i.test(v.lang)).map((v) => (
-                    <option key={v.name} value={v.name}>{v.name} · {v.lang}</option>
-                  ))}
-                </select>
-                <label className="text-xs text-slate-500 mt-3 block">Speed · {rate.toFixed(1)}x</label>
-                <input
-                  type="range" min={0.7} max={1.4} step={0.1} value={rate}
-                  onChange={(e) => setRate(parseFloat(e.target.value))}
-                  className="w-full"
-                />
-                {isElite && (
-                  <label className="mt-3 flex items-center gap-2 text-sm text-slate-700">
-                    <input type="checkbox" checked={autoSpeak} onChange={(e) => setAutoSpeak(e.target.checked)} />
-                    Enable spoken replies
-                  </label>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Center — Orb + waveform */}
-          <div className="relative z-10 flex flex-col items-center gap-8 px-6 max-w-2xl text-center">
-            <div className="relative w-72 h-72 sm:w-80 sm:h-80 flex items-center justify-center">
-              {/* Outer glow rings */}
-              {[0, 1, 2].map((i) => (
-                <motion.div
-                  key={i}
-                  className="absolute inset-0 rounded-full"
-                  style={{
-                    background: "radial-gradient(circle, hsla(244,84%,62%,0.18), transparent 60%)",
-                  }}
-                  animate={{
-                    scale: 1 + amplitude * 0.4 + i * 0.12,
-                    opacity: state === "idle" ? 0.4 - i * 0.1 : 0.7 - i * 0.15,
-                  }}
-                  transition={{ type: "spring", stiffness: 80, damping: 18 }}
-                />
-              ))}
-              {/* Orb core */}
-              <motion.div
-                className="relative w-44 h-44 sm:w-52 sm:h-52 rounded-full shadow-[0_30px_80px_-20px_rgba(99,102,241,0.6)] overflow-hidden"
-                style={{
-                  background:
-                    "conic-gradient(from 180deg, #818cf8, #a78bfa, #38bdf8, #818cf8)",
-                }}
-                animate={{ rotate: 360, scale: 1 + amplitude * 0.06 }}
-                transition={{ rotate: { duration: 18, repeat: Infinity, ease: "linear" }, scale: { type: "spring", stiffness: 100, damping: 15 } }}
-              >
-                <div className="absolute inset-2 rounded-full bg-white/40 backdrop-blur-md" />
-                <div className="absolute inset-6 rounded-full bg-gradient-to-br from-white/80 to-indigo-100/50" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  {state === "thinking" ? (
-                    <Loader2 className="w-10 h-10 text-indigo-700 animate-spin" />
+          <div className="relative z-10 flex min-h-dvh flex-col px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-6">
+            <header className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-border/60 bg-background/70 px-3 py-2 shadow-[0_18px_55px_-35px_hsl(230_80%_34%/0.45)] backdrop-blur-2xl sm:px-4">
+                <div className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br ${glowClass} shadow-[0_16px_42px_-18px_hsl(245_85%_55%/0.75)]`}>
+                  {!avatarBroken ? (
+                    <img src={lumoVoiceProfile.avatar} alt="Lumo voice avatar" className="h-full w-full object-cover" onError={() => setAvatarBroken(true)} />
                   ) : (
-                    <Sparkles className="w-10 h-10 text-indigo-700" />
+                    <Sparkles className="h-5 w-5 text-[hsl(0_0%_100%)]" />
                   )}
                 </div>
-              </motion.div>
-            </div>
-
-            {/* Waveform */}
-            <div className="flex items-end gap-1.5 h-16">
-              {Array.from({ length: 28 }).map((_, i) => {
-                const phase = (i / 28) * Math.PI * 2;
-                const h = state === "idle"
-                  ? 8 + Math.sin(phase) * 4
-                  : 14 + Math.abs(Math.sin(phase + amplitude * 5)) * 36 * amplitude;
-                return (
-                  <motion.span
-                    key={i}
-                    className="w-1.5 rounded-full bg-gradient-to-t from-indigo-500 to-violet-500"
-                    animate={{ height: h }}
-                    transition={{ type: "spring", stiffness: 220, damping: 18 }}
-                  />
-                );
-              })}
-            </div>
-
-            <div className="min-h-[3rem]">
-              <div className="text-lg sm:text-xl font-display font-semibold text-slate-900">{stateLabel}</div>
-              {(partial || transcript) && (
-                <div className="mt-1 text-sm text-slate-600 max-w-xl">
-                  <span className="text-slate-900">{transcript}</span>
-                  <span className="text-slate-400"> {partial}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Big mic button */}
-            <div className="flex items-center gap-4">
-              {state === "speaking" && (
-                <button
-                  onClick={stopSpeaking}
-                  className="px-4 h-12 rounded-2xl bg-white/80 border border-white shadow text-sm font-medium text-slate-700 hover:bg-white"
-                >
-                  Stop speaking
-                </button>
-              )}
-              <motion.button
-                onClick={state === "listening" ? stopListening : startListening}
-                disabled={!canUse || state === "thinking"}
-                whileTap={{ scale: 0.94 }}
-                className={`relative w-20 h-20 rounded-full flex items-center justify-center text-white shadow-[0_15px_40px_-10px_rgba(99,102,241,0.7)] transition-colors disabled:opacity-50 ${
-                  state === "listening"
-                    ? "bg-gradient-to-br from-rose-500 to-pink-600"
-                    : "bg-gradient-to-br from-indigo-600 to-violet-600"
-                }`}
-                aria-label={state === "listening" ? "Stop listening" : "Start listening"}
-              >
-                {state === "listening" && (
-                  <motion.span
-                    className="absolute inset-0 rounded-full bg-rose-400/40"
-                    animate={{ scale: [1, 1.5, 1], opacity: [0.6, 0, 0.6] }}
-                    transition={{ duration: 1.6, repeat: Infinity }}
-                  />
-                )}
-                {state === "listening" ? <MicOff className="w-8 h-8" /> : <Mic className="w-8 h-8" />}
-              </motion.button>
-              {turns.length > 0 && (
-                <button
-                  onClick={() => setTurns([])}
-                  className="px-4 h-12 rounded-2xl bg-white/80 border border-white shadow text-sm font-medium text-slate-700 hover:bg-white"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-
-            {!canUse && (
-              <div className="text-xs text-slate-500 max-w-sm">
-                Voice AI unlocks on Pro (dictation) and Elite (full live conversation with spoken replies).
-              </div>
-            )}
-          </div>
-
-          {/* Live transcript log */}
-          {turns.length > 0 && (
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-2xl max-h-44 overflow-y-auto rounded-2xl bg-white/70 backdrop-blur border border-white shadow-md p-3 z-10">
-              <div className="flex items-center gap-2 mb-2 text-[11px] uppercase tracking-widest text-slate-500">
-                <MessageSquare className="w-3.5 h-3.5" /> Live conversation
-              </div>
-              <div className="space-y-1.5">
-                {turns.slice(-6).map((t) => (
-                  <div key={t.id} className="text-sm">
-                    <span className={`font-semibold ${t.role === "user" ? "text-slate-900" : "text-indigo-700"}`}>
-                      {t.role === "user" ? "You" : "Lumo"}:
-                    </span>{" "}
-                    <span className="text-slate-700">{stripMarkdown(t.text).slice(0, 180)}</span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="truncate font-display text-sm font-bold tracking-tight sm:text-base">Lumo Voice AI</p>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[hsl(152_72%_42%/0.12)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[hsl(152_64%_30%)]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[hsl(152_72%_42%)]" /> Online
+                    </span>
                   </div>
-                ))}
+                  <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                    <span className="inline-flex items-center gap-1"><Radio className="h-3 w-3" /> {routerMeta.providerLabel}</span>
+                    <span className="hidden sm:inline">•</span>
+                    <span className="truncate">{modelLabels[selectedModel] || selectedModel}</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSettingsOpen((value) => !value)}
+                  className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/60 bg-background/70 text-muted-foreground shadow-sm backdrop-blur-xl transition hover:text-foreground"
+                  title="Voice settings"
+                >
+                  <Settings2 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={close}
+                  className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/60 bg-background/70 text-muted-foreground shadow-sm backdrop-blur-xl transition hover:text-foreground"
+                  title="Close Voice AI"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </header>
+
+            <AnimatePresence>
+              {settingsOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                  className="absolute right-4 top-[calc(env(safe-area-inset-top)+4.25rem)] z-30 w-[min(22rem,calc(100vw-2rem))] rounded-3xl border border-border/60 bg-background/90 p-4 shadow-[0_24px_80px_-32px_hsl(230_60%_30%/0.35)] backdrop-blur-2xl sm:right-6"
+                >
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-display text-sm font-bold">Voice settings</p>
+                      <p className="text-xs text-muted-foreground">{lumoVoiceProfile.voiceType} · {lumoVoiceProfile.accent}</p>
+                    </div>
+                    {voiceReplies ? <Volume2 className="h-4 w-4 text-[hsl(238_82%_58%)]" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}
+                  </div>
+
+                  <label className="text-xs font-medium text-muted-foreground">Lumo voice</label>
+                  <select
+                    value={selectedVoiceName || ""}
+                    onChange={(event) => setSelectedVoiceName(event.target.value)}
+                    disabled={!voicesReady}
+                    className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[hsl(238_82%_58%/0.25)]"
+                  >
+                    {voices.map((voice) => (
+                      <option key={`${voice.name}-${voice.lang}`} value={voice.name}>{voice.name} · {voice.lang}</option>
+                    ))}
+                  </select>
+
+                  <label className="mt-4 block text-xs font-medium text-muted-foreground">Speed · {speechRate.toFixed(1)}x</label>
+                  <input
+                    type="range"
+                    min={0.75}
+                    max={1.25}
+                    step={0.05}
+                    value={speechRate}
+                    onChange={(event) => setSpeechRate(Number(event.target.value))}
+                    className="mt-2 w-full accent-[hsl(238_82%_58%)]"
+                  />
+
+                  <div className="mt-4 space-y-3">
+                    <label className="flex items-center justify-between gap-4 rounded-2xl bg-muted/50 px-3 py-2 text-sm">
+                      <span className="flex items-center gap-2"><Volume2 className="h-4 w-4" /> Voice replies</span>
+                      <input type="checkbox" checked={voiceReplies} onChange={(event) => setVoiceReplies(event.target.checked)} />
+                    </label>
+                    <label className={`flex items-center justify-between gap-4 rounded-2xl px-3 py-2 text-sm ${isElite ? "bg-muted/50" : "bg-[hsl(42_92%_58%/0.12)] text-muted-foreground"}`}>
+                      <span className="flex items-center gap-2">{isElite ? <Zap className="h-4 w-4" /> : <Lock className="h-4 w-4" />} Continuous Conversation</span>
+                      <input type="checkbox" checked={continuousMode && isElite} disabled={!isElite} onChange={(event) => setContinuousMode(event.target.checked)} />
+                    </label>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <main className="flex flex-1 flex-col items-center justify-center gap-5 py-5 sm:gap-7 sm:py-8">
+              <section className="grid w-full max-w-5xl items-center gap-5 lg:grid-cols-[1fr_18rem]">
+                <div className="flex min-w-0 flex-col items-center text-center">
+                  <motion.button
+                    type="button"
+                    onClick={handleOrbTap}
+                    disabled={voiceState === "processing" || !canUseVoice}
+                    whileTap={{ scale: 0.96 }}
+                    className="group relative flex aspect-square w-[min(72vw,21rem)] max-w-[21rem] items-center justify-center rounded-full outline-none disabled:cursor-not-allowed disabled:opacity-70 sm:w-[21rem]"
+                    aria-label={voiceState === "listening" ? "Stop listening" : voiceState === "speaking" ? "Stop speaking" : "Start Lumo Voice AI"}
+                  >
+                    {[0, 1, 2].map((ring) => (
+                      <motion.span
+                        key={ring}
+                        className={`absolute inset-5 rounded-full bg-gradient-to-br ${glowClass} opacity-25 blur-xl`}
+                        animate={{
+                          scale: voiceState === "listening" ? [1, 1.18 + ring * 0.1, 1] : 1 + level * 0.22 + ring * 0.08,
+                          opacity: voiceState === "error" ? 0.12 : voiceState === "idle" ? 0.18 - ring * 0.03 : 0.34 - ring * 0.05,
+                        }}
+                        transition={{ duration: 1.8 + ring * 0.25, repeat: voiceState === "listening" ? Infinity : 0, ease: "easeInOut" }}
+                      />
+                    ))}
+
+                    {particles.map((particle) => {
+                      const angle = (particle / particles.length) * Math.PI * 2;
+                      const radius = 118 + (particle % 4) * 13;
+                      return (
+                        <motion.span
+                          key={particle}
+                          aria-hidden
+                          className="absolute h-1.5 w-1.5 rounded-full bg-[hsl(238_82%_58%/0.55)] shadow-[0_0_18px_hsl(238_82%_58%/0.35)]"
+                          style={{ left: "50%", top: "50%" }}
+                          animate={{
+                            x: Math.cos(angle) * radius * (0.88 + level * 0.16),
+                            y: Math.sin(angle) * radius * (0.88 + level * 0.16),
+                            opacity: voiceState === "processing" || voiceState === "speaking" ? [0.25, 0.9, 0.25] : 0.32,
+                            scale: voiceState === "listening" ? [0.8, 1.3, 0.8] : 1,
+                          }}
+                          transition={{ duration: 2.4 + particle * 0.035, repeat: Infinity, ease: "easeInOut" }}
+                        />
+                      );
+                    })}
+
+                    <motion.span
+                      className={`absolute inset-9 rounded-full bg-gradient-to-br ${glowClass} shadow-[0_34px_100px_-38px_hsl(245_85%_48%/0.85)]`}
+                      animate={{
+                        rotate: voiceState === "processing" ? 360 : voiceState === "speaking" ? [0, 6, -6, 0] : 0,
+                        scale: 1 + level * (voiceState === "speaking" ? 0.12 : 0.08),
+                      }}
+                      transition={{ rotate: { duration: voiceState === "processing" ? 4 : 1.8, repeat: Infinity, ease: "linear" }, scale: { type: "spring", stiffness: 120, damping: 16 } }}
+                    />
+                    <span className="absolute inset-14 rounded-full border border-[hsl(0_0%_100%/0.65)] bg-[hsl(0_0%_100%/0.38)] shadow-inner backdrop-blur-2xl" />
+                    <span className="absolute inset-[5.3rem] rounded-full bg-background/80 shadow-[inset_0_1px_18px_hsl(0_0%_100%/0.9)]" />
+
+                    <div className="relative z-10 flex flex-col items-center gap-2">
+                      {voiceState === "processing" ? (
+                        <Loader2 className="h-10 w-10 animate-spin text-[hsl(238_82%_48%)]" />
+                      ) : voiceState === "listening" ? (
+                        <MicOff className="h-10 w-10 text-[hsl(344_82%_56%)]" />
+                      ) : voiceState === "speaking" ? (
+                        <Waves className="h-10 w-10 text-[hsl(238_82%_48%)]" />
+                      ) : voiceState === "error" ? (
+                        <AlertTriangle className="h-10 w-10 text-destructive" />
+                      ) : (
+                        <Mic className="h-10 w-10 text-[hsl(238_82%_48%)]" />
+                      )}
+                      <span className="text-xs font-bold uppercase tracking-[0.22em] text-muted-foreground">{lumoVoiceProfile.name}</span>
+                    </div>
+                  </motion.button>
+
+                  <div className="mt-1 flex h-20 items-center justify-center gap-1.5 sm:h-24">
+                    {bars.map((bar) => {
+                      const phase = (bar / bars.length) * Math.PI * 2;
+                      const height = voiceState === "idle"
+                        ? 10 + Math.abs(Math.sin(phase)) * 10
+                        : 14 + Math.abs(Math.sin(phase + level * 5 + bar * 0.2)) * (54 * Math.max(0.2, level));
+                      return (
+                        <motion.span
+                          key={bar}
+                          className={`w-1.5 rounded-full bg-gradient-to-t ${glowClass}`}
+                          animate={{ height, opacity: voiceState === "error" ? 0.35 : 0.82 }}
+                          transition={{ type: "spring", stiffness: 260, damping: 22 }}
+                        />
+                      );
+                    })}
+                  </div>
+
+                  <motion.div layout className="min-h-[7rem] max-w-2xl px-2">
+                    <p className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-4xl">{stateCopy.label}</p>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground sm:text-base">{stateCopy.caption}</p>
+                    <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-[hsl(238_70%_52%)]">{stateCopy.helper}</p>
+                  </motion.div>
+
+                  <AnimatePresence>
+                    {voiceState === "error" && voiceError && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 8 }}
+                        className="mt-3 w-full max-w-xl rounded-3xl border border-destructive/20 bg-background/82 p-4 text-left shadow-[0_22px_70px_-38px_hsl(0_72%_45%/0.45)] backdrop-blur-2xl"
+                      >
+                        <div className="flex gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+                            <AlertTriangle className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-display text-base font-bold text-foreground">{voiceError.title}</h3>
+                            <p className="mt-1 text-sm text-muted-foreground">{voiceError.detail}</p>
+                            {voiceError.hint && <p className="mt-1 text-xs text-muted-foreground">{voiceError.hint}</p>}
+                            <button
+                              type="button"
+                              onClick={startListening}
+                              className="mt-3 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition hover:opacity-90"
+                            >
+                              <RefreshCw className="h-4 w-4" /> Retry
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                <aside className="grid gap-3 rounded-3xl border border-border/60 bg-background/70 p-4 shadow-[0_24px_80px_-44px_hsl(230_60%_30%/0.42)] backdrop-blur-2xl lg:self-center">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">Session</p>
+                      <p className="font-display text-lg font-bold">{tier === "elite" ? "Elite Voice" : tier === "pro" ? "Pro Voice" : "Free"}</p>
+                    </div>
+                    {isElite ? <Crown className="h-5 w-5 text-[hsl(38_92%_48%)]" /> : <Clock3 className="h-5 w-5 text-[hsl(238_82%_58%)]" />}
+                  </div>
+
+                  <div className="rounded-2xl bg-muted/55 p-3">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{isElite ? "Voice access" : isPro ? "Voice minutes today" : "Access"}</span>
+                      <span>{isElite ? "Unlimited" : isPro ? `${secondsToLabel(proRemainingSeconds)} left` : "Locked"}</span>
+                    </div>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-background">
+                      <motion.div
+                        className={`h-full rounded-full bg-gradient-to-r ${isElite ? providerGlow.claude : glowClass}`}
+                        animate={{ width: `${isElite ? 100 : Math.max(4, 100 - usagePercent)}%` }}
+                        transition={{ type: "spring", stiffness: 120, damping: 18 }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-2xl bg-background/78 p-3">
+                      <p className="text-muted-foreground">AI engine</p>
+                      <p className="mt-1 truncate font-semibold text-foreground">{routerMeta.providerLabel}</p>
+                    </div>
+                    <div className="rounded-2xl bg-background/78 p-3">
+                      <p className="text-muted-foreground">Latency</p>
+                      <p className="mt-1 font-semibold text-foreground">{routerMeta.latencyMs ? `${routerMeta.latencyMs}ms` : "Live"}</p>
+                    </div>
+                    <div className="rounded-2xl bg-background/78 p-3">
+                      <p className="text-muted-foreground">Memory</p>
+                      <p className="mt-1 font-semibold text-foreground">{Math.min(seedHistory.length + turns.length, 14)} turns</p>
+                    </div>
+                    <div className="rounded-2xl bg-background/78 p-3">
+                      <p className="text-muted-foreground">Tokens</p>
+                      <p className="mt-1 font-semibold text-foreground">{routerMeta.tokens ? routerMeta.tokens.toLocaleString() : "—"}</p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-[hsl(238_82%_58%/0.14)] bg-[hsl(238_82%_58%/0.08)] p-3 text-xs leading-5 text-muted-foreground">
+                    <div className="mb-1 flex items-center gap-2 font-semibold text-foreground"><Brain className="h-4 w-4 text-[hsl(238_82%_58%)]" /> Voice memory</div>
+                    Lumo remembers this voice session, recent chat turns, your persona, goals, budgets, and financial questions while responding.
+                  </div>
+                </aside>
+              </section>
+
+              <section className="w-full max-w-5xl overflow-hidden rounded-3xl border border-border/60 bg-background/72 shadow-[0_24px_80px_-46px_hsl(230_60%_30%/0.45)] backdrop-blur-2xl">
+                <div className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3 sm:px-5">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <MessageSquare className="h-4 w-4 text-[hsl(238_82%_58%)]" /> Live conversation
+                  </div>
+                  <div className="text-xs text-muted-foreground">{turns.length ? `${turns.length} voice turns` : "Ready"}</div>
+                </div>
+                <div className="max-h-52 space-y-3 overflow-y-auto p-4 sm:max-h-60 sm:p-5">
+                  {turns.length === 0 ? (
+                    <div className="flex min-h-24 items-center justify-center rounded-2xl border border-dashed border-border bg-muted/35 px-4 text-center text-sm text-muted-foreground">
+                      Tap the orb and ask Lumo about spending, saving, budgets, investments, or goals.
+                    </div>
+                  ) : (
+                    turns.slice(-10).map((turn) => (
+                      <motion.div
+                        key={turn.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`flex ${turn.role === "user" ? "justify-end" : "justify-start"}`}
+                      >
+                        <div className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm shadow-sm ${turn.role === "user" ? "bg-primary text-primary-foreground" : "border border-border/70 bg-background/86 text-foreground"}`}>
+                          <div className={`mb-1 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.15em] ${turn.role === "user" ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                            <span className="inline-flex items-center gap-1">{turn.role === "user" ? <Mic className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />} {turn.role === "user" ? "You" : lumoVoiceProfile.name}</span>
+                            <span>{formatClock(turn.timestamp)}</span>
+                            {turn.providerLabel && <span className="rounded-full bg-[hsl(238_82%_58%/0.10)] px-2 py-0.5 text-[hsl(238_72%_48%)]">{turn.providerLabel}</span>}
+                          </div>
+                          <p className="leading-6">{stripMarkdown(turn.text).slice(0, 420)}</p>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
+                </div>
+              </section>
+            </main>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
