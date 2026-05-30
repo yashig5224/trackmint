@@ -488,11 +488,12 @@ const LumoVoiceMode = ({ open, onClose, tier, persona, selectedModel, onTranscri
         toast(`Voice routed via ${data.providerLabel}`, { duration: 2200 });
       }
       speakResponse(aiText);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Lumo Voice ai-router error", error);
+      const message = error instanceof Error ? error.message : "The network or AI engine failed during processing.";
       setSafeError({
         title: "Lumo couldn’t reach the AI router.",
-        detail: error?.message || "The network or AI engine failed during processing.",
+        detail: message,
         hint: "Retry in a moment — your session has been safely reset.",
       });
     }
@@ -589,7 +590,7 @@ const LumoVoiceMode = ({ open, onClose, tier, persona, selectedModel, onTranscri
           // no-op
         }
       };
-      recognition.onresult = (event: any) => {
+      recognition.onresult = (event: SpeechRecognitionEventLike) => {
         let interim = "";
         let finalText = finalTranscriptRef.current;
         for (let index = event.resultIndex; index < event.results.length; index += 1) {
@@ -609,7 +610,7 @@ const LumoVoiceMode = ({ open, onClose, tier, persona, selectedModel, onTranscri
           // no-op
         }
       };
-      recognition.onerror = (event: any) => {
+      recognition.onerror = (event: SpeechRecognitionErrorLike) => {
         console.error("Lumo Voice recognition error", event?.error);
         setSafeError(errorFromSpeech(event?.error));
       };
@@ -620,12 +621,13 @@ const LumoVoiceMode = ({ open, onClose, tier, persona, selectedModel, onTranscri
         finishUtterance(text);
       };
       recognition.start();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Lumo Voice microphone error", error);
-      const denied = error?.name === "NotAllowedError" || error?.name === "SecurityError";
+      const browserError = error instanceof DOMException || error instanceof Error ? error : null;
+      const denied = browserError?.name === "NotAllowedError" || browserError?.name === "SecurityError";
       setSafeError(denied ? errorFromSpeech("not-allowed") : {
         title: "Microphone session couldn’t start.",
-        detail: error?.message || "Lumo could not activate your input device.",
+        detail: browserError?.message || "Lumo could not activate your input device.",
         hint: "Check browser permissions and retry.",
       });
     }
