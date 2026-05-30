@@ -1155,7 +1155,6 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
         persona={{ id: persona.id, name: persona.name }}
         selectedModel={selectedModel}
         seedHistory={messages.slice(-6).map((m) => ({ role: m.role, text: m.fullText || m.text }))}
-        onTranscript={(text) => sendMessage(text)}
       />
     </motion.div>
 
