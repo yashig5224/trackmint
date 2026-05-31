@@ -580,6 +580,20 @@ const Reports = ({ transactions, categoryData, trendData, stats, currency, tier,
         <li>• Top category: <strong>{categoryData[0]?.name || "—"}</strong></li>
       </ul>
     </div>
+    <ExportCenter
+      baseInput={{
+        userName: profile?.full_name || "Friend",
+        currency,
+        monthlyIncome: Number(profile?.monthly_income || 0),
+        transactions,
+        goals,
+        stats,
+        categoryData,
+        trendData,
+        tier,
+      }}
+      onUpgrade={onUpgrade}
+    />
   </div>
 );
 
