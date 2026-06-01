@@ -89,6 +89,113 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_logs: {
+        Row: {
+          action_taken: string
+          amount_saved: number | null
+          created_at: string
+          id: string
+          metadata: Json
+          result: string
+          rule_id: string | null
+          rule_name: string
+          severity: string
+          trigger_reason: string
+          user_id: string
+        }
+        Insert: {
+          action_taken: string
+          amount_saved?: number | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          result?: string
+          rule_id?: string | null
+          rule_name: string
+          severity?: string
+          trigger_reason: string
+          user_id: string
+        }
+        Update: {
+          action_taken?: string
+          amount_saved?: number | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          result?: string
+          rule_id?: string | null
+          rule_name?: string
+          severity?: string
+          trigger_reason?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_logs_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_rules: {
+        Row: {
+          action_config: Json
+          action_type: string
+          condition_config: Json
+          condition_type: string
+          created_at: string
+          description: string | null
+          enabled: boolean
+          id: string
+          is_prebuilt: boolean
+          last_triggered_at: string | null
+          name: string
+          prebuilt_key: string | null
+          tier: string
+          trigger_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action_config?: Json
+          action_type: string
+          condition_config?: Json
+          condition_type: string
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          is_prebuilt?: boolean
+          last_triggered_at?: string | null
+          name: string
+          prebuilt_key?: string | null
+          tier?: string
+          trigger_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action_config?: Json
+          action_type?: string
+          condition_config?: Json
+          condition_type?: string
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          is_prebuilt?: boolean
+          last_triggered_at?: string | null
+          name?: string
+          prebuilt_key?: string | null
+          tier?: string
+          trigger_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       budgets: {
         Row: {
           category: string
