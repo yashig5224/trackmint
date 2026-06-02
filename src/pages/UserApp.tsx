@@ -65,6 +65,7 @@ const UserApp = () => {
   const [tab, setTab] = useState<Tab>("overview");
   const [transactions, setTransactions] = useState<Tx[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
   const [showTxForm, setShowTxForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
@@ -79,9 +80,11 @@ const UserApp = () => {
     Promise.all([
       supabase.from("transactions").select("*").eq("user_id", user.id).order("transaction_date", { ascending: false }),
       supabase.from("goals").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-    ]).then(([tx, gl]) => {
+      supabase.from("budgets").select("*").eq("user_id", user.id).order("month", { ascending: false }),
+    ]).then(([tx, gl, bg]) => {
       if (tx.data) setTransactions(tx.data as Tx[]);
       if (gl.data) setGoals(gl.data as Goal[]);
+      if (bg.data) setBudgets(bg.data as Budget[]);
     });
   }, [user]);
 
