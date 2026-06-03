@@ -623,6 +623,12 @@ const CommandCenter: React.FC<Props> = ({ transactions, goals, budgets, currency
         <RecentTransactions transactions={transactions} currency={currency} />
       </div>
 
+      {/* Phase 4 + Phase 5 — Health Score & Forecast */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <HealthScoreWidget transactions={transactions} goals={goals} budgets={budgets} />
+        <ForecastWidget transactions={transactions} goals={goals} currency={currency} />
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <CategoryAnalytics transactions={transactions} currency={currency} />
         <GoalsDashboard goals={goals} transactions={transactions} currency={currency} />
