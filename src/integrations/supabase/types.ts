@@ -265,6 +265,51 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          archived: boolean
+          created_at: string
+          id: string
+          link: string | null
+          message: string
+          metadata: Json
+          read: boolean
+          severity: string
+          title: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          id?: string
+          link?: string | null
+          message: string
+          metadata?: Json
+          read?: boolean
+          severity?: string
+          title: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          id?: string
+          link?: string | null
+          message?: string
+          metadata?: Json
+          read?: boolean
+          severity?: string
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
