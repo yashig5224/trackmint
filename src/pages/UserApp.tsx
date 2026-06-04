@@ -265,6 +265,8 @@ const UserApp = () => {
                     tier={tier}
                     profile={profile}
                     goals={goals}
+                    budgets={budgets}
+                    userId={user?.id}
                     onUpgrade={() => openUpgrade(isPro ? "elite" : "pro")}
                   />
                 )}
