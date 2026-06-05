@@ -92,10 +92,13 @@ const palette = (i: number): RGB => {
   return arr[i % arr.length];
 };
 
-const fmt = (n: number, c = "INR") =>
-  new Intl.NumberFormat("en-IN", { style: "currency", currency: c, maximumFractionDigits: 0 }).format(
-    Math.round(n || 0),
-  );
+const fmt = (n: number, c = "INR") => {
+  const value = new Intl.NumberFormat("en-IN", {
+    maximumFractionDigits: 0,
+  }).format(Math.round(n || 0));
+
+  return c === "INR" ? `₹${value}` : value;
+};
 const pct = (n: number) => `${Math.round(n)}%`;
 const safe = (n: number) => (Number.isFinite(n) ? n : 0);
 
@@ -194,14 +197,14 @@ function pageFooter(d: Doc) {
     d.setDrawColor(...LINE);
     d.setLineWidth(0.3);
     d.line(20, H(d) - 24, W(d) - 20, H(d) - 24);
-    d.setFontSize(8.5););););
+    d.setFontSize(8.5);
     d.setFont("helvetica", "normal");
     d.setTextColor(...MUTED);
     d.text("FinTrack AI · Confidential financial intelligence", 20, H(d) - 14);
     d.text(`Page ${i} of ${total}`, W(d) - 20, H(d) - 14, { align: "right" });
     // tiny brand dot
     d.setFillColor(...PRIMARY);
-    d.circle(W(d)/2,H(d)-16,1.8,"F");
+    d.circle(W(d) / 2, H(d) - 16, 1.8, "F");
   }
 }
 
@@ -1294,7 +1297,7 @@ function pageGoalIntel(doc: Doc, input: ReportInput) {
   const monthlySav = Math.max(0, input.stats.savings);
   const sharePer = input.goals.length > 0 ? monthlySav / input.goals.length : 0;
 
-  input.goals.slice(0, 5).forEach((g) => {
+  input.goals.slice(0, 5).forEach((g: ReportGoal) => {
     const target = Number(g.target_amount);
     const current = Number(g.current_amount);
     const remaining = Math.max(0, target - current);
@@ -1326,11 +1329,11 @@ function pageGoalIntel(doc: Doc, input: ReportInput) {
     // Goal health 0-100
     const healthScore = Math.round(ratio * 50 + (probability / 100) * 50);
     // Risk
-    const fcEntry = fc.goalCompletions.find((x) => x.name === g.goal_name);
+    const fcEntry = fc.goalCompletions.find((x: { name: string; risk?: string }) => x.name === g.goal_name);
     const risk = fcEntry?.risk || (probability >= 70 ? "low" : probability >= 40 ? "medium" : "high");
     const riskTone: RGB = risk === "low" ? GOOD : risk === "medium" ? WARN : BAD;
 
-    panel(doc, 20, y, W(doc) - 40, 110);
+    panel(doc, 20, y, W(doc) - 40, 145);
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...INK);
@@ -1587,7 +1590,7 @@ function pageForecast(doc: Doc, input: ReportInput) {
   if (!fc.goalCompletions.length) {
     paragraph(doc, 30, gy, W(doc) - 60, "Add goals to unlock per-goal completion forecasts.", { color: MUTED });
   } else {
-    fc.goalCompletions.slice(0, 5).forEach((g) => {
+    fc.goalCompletions.slice(0, 5).forEach((g: any) => {
       const tone: RGB = g.risk === "low" ? GOOD : g.risk === "medium" ? WARN : BAD;
       const etaTxt = !g.etaMonths
         ? "Boost savings to unlock"
