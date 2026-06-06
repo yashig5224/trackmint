@@ -273,9 +273,13 @@ const UserApp = () => {
                 {tab === "automation" && (
                   <AutomationCenter
                     transactions={transactions}
+                    goals={goals}
+                    budgets={budgets}
                     income={stats.income}
                     expenses={stats.expenses}
+                    monthlyIncome={Number(profile?.monthly_income || 0)}
                     currency={currency}
+                    userName={profile?.full_name || "Friend"}
                     tier={tier}
                     onUpgrade={() => openUpgrade(isPro ? "elite" : "pro")}
                     onCreateGoal={async (name, amount) => {
@@ -286,6 +290,12 @@ const UserApp = () => {
                       if (error) { toast.error(error.message); return; }
                       setGoals(prev => [inserted as Goal, ...prev]);
                       toast.success(`Goal "${name}" created`);
+                    }}
+                    onGoalContribute={async (id, amount) => {
+                      const g = goals.find(x => x.id === id); if (!g) return;
+                      const newAmt = Math.min(Number(g.target_amount), Number(g.current_amount) + amount);
+                      await supabase.from("goals").update({ current_amount: newAmt }).eq("id", id);
+                      setGoals(prev => prev.map(x => x.id === id ? { ...x, current_amount: newAmt } : x));
                     }}
                   />
                 )}
