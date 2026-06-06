@@ -69,8 +69,8 @@ export const AutomationCenter = ({
   const [running, setRunning] = useState(false);
 
   const health: HealthScore = useMemo(
-    () => computeHealthScore({ transactions, goals, budgets, monthlyIncome }),
-    [transactions, goals, budgets, monthlyIncome]
+    () => computeHealthScore({ transactions, goals, budgets }),
+    [transactions, goals, budgets]
   );
   const forecast: Forecast = useMemo(
     () => computeForecast({ transactions, goals }),
