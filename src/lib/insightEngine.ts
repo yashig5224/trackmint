@@ -3,7 +3,7 @@
 // surface daily/weekly/monthly insights, anomalies, drift and opportunities.
 
 import type { Tx, Goal } from "@/components/dashboard/CommandCenter";
-import { computeFinancialHealth } from "@/lib/financialHealth";
+import { computeHealthScore } from "@/lib/financialHealth";
 import { computeGoalIntelligence } from "@/lib/goalIntelligence";
 
 export type InsightTimeframe = "daily" | "weekly" | "monthly";
