@@ -442,6 +442,8 @@ export type Database = {
           id: string
           order_id: string | null
           payment_id: string | null
+          pending_plan_change: string | null
+          pending_plan_change_at: string | null
           plan_name: string | null
           price_id: string | null
           product_id: string | null
@@ -464,6 +466,8 @@ export type Database = {
           id?: string
           order_id?: string | null
           payment_id?: string | null
+          pending_plan_change?: string | null
+          pending_plan_change_at?: string | null
           plan_name?: string | null
           price_id?: string | null
           product_id?: string | null
@@ -486,6 +490,8 @@ export type Database = {
           id?: string
           order_id?: string | null
           payment_id?: string | null
+          pending_plan_change?: string | null
+          pending_plan_change_at?: string | null
           plan_name?: string | null
           price_id?: string | null
           product_id?: string | null
