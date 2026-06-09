@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
-import Dashboard from "./pages/Dashboard";
+
 import Coach from "./pages/Coach";
 import Login from "./pages/Login";
 import UserApp from "./pages/UserApp";
@@ -14,6 +14,7 @@ import OnboardingFlow from "./components/auth/OnboardingFlow";
 import Pricing from "./pages/Pricing";
 import Billing from "./pages/Billing";
 import NotFound from "./pages/NotFound";
+import { DemoModeProvider } from "@/contexts/DemoModeContext";
 
 const queryClient = new QueryClient();
 
@@ -30,7 +31,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/coach" element={<Coach />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard" element={<DemoModeProvider><UserApp /></DemoModeProvider>} />
 
             {/* Protected */}
             <Route path="/onboarding" element={

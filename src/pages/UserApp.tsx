@@ -25,6 +25,9 @@ import InsightFeed from "@/components/dashboard/InsightFeed";
 import SubscriptionIntelligencePanel from "@/components/dashboard/SubscriptionIntelligencePanel";
 import SubscriptionPanel from "@/components/subscription/SubscriptionPanel";
 import SubscriptionCard from "@/components/subscription/SubscriptionCard";
+import { useDemoMode } from "@/contexts/DemoModeContext";
+import { DEMO_TRANSACTIONS, DEMO_GOALS, DEMO_BUDGETS, DEMO_PROFILE } from "@/lib/demoData";
+import DemoPlanSwitcher from "@/components/demo/DemoPlanSwitcher";
 
 type Tab = "overview" | "transactions" | "goals" | "reports" | "automation" | "settings";
 
@@ -67,32 +70,40 @@ const fmt = (n: number, c = "INR") => new Intl.NumberFormat("en-IN", { style: "c
 
 const UserApp = () => {
   const navigate = useNavigate();
-  const { user, profile, signOut, refreshProfile } = useAuth();
+  const auth = useAuth();
+  const demo = useDemoMode();
+  const user = demo.isDemo ? ({ id: "demo-user", email: "demo@fintrack.ai" } as any) : auth.user;
+  const profile = demo.isDemo ? (DEMO_PROFILE as any) : auth.profile;
+  const signOut = demo.isDemo ? async () => { navigate("/"); } : auth.signOut;
+  const refreshProfile = demo.isDemo ? async () => {} : auth.refreshProfile;
   const [tab, setTab] = useState<Tab>("overview");
-  const [transactions, setTransactions] = useState<Tx[]>([]);
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [transactions, setTransactions] = useState<Tx[]>(demo.isDemo ? (DEMO_TRANSACTIONS as unknown as Tx[]) : []);
+  const [goals, setGoals] = useState<Goal[]>(demo.isDemo ? (DEMO_GOALS as unknown as Goal[]) : []);
+  const [budgets, setBudgets] = useState<Budget[]>(demo.isDemo ? (DEMO_BUDGETS as unknown as Budget[]) : []);
   const [showTxForm, setShowTxForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeTier, setUpgradeTier] = useState<"pro" | "elite">("pro");
   const { tier, isPro, isElite } = useSubscription();
-  const openUpgrade = (t: "pro" | "elite" = "pro") => { setUpgradeTier(t); setUpgradeOpen(true); };
+  const openUpgrade = (t: "pro" | "elite" = "pro") => {
+    if (demo.isDemo) { toast.info("Demo Mode — use the plan switcher to preview tiers."); return; }
+    setUpgradeTier(t); setUpgradeOpen(true);
+  };
 
   const currency = profile?.currency || "INR";
 
   useEffect(() => {
-    if (!user) return;
+    if (demo.isDemo || !auth.user) return;
     Promise.all([
-      supabase.from("transactions").select("*").eq("user_id", user.id).order("transaction_date", { ascending: false }),
-      supabase.from("goals").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("budgets").select("*").eq("user_id", user.id).order("month", { ascending: false }),
+      supabase.from("transactions").select("*").eq("user_id", auth.user.id).order("transaction_date", { ascending: false }),
+      supabase.from("goals").select("*").eq("user_id", auth.user.id).order("created_at", { ascending: false }),
+      supabase.from("budgets").select("*").eq("user_id", auth.user.id).order("month", { ascending: false }),
     ]).then(([tx, gl, bg]) => {
       if (tx.data) setTransactions(tx.data as Tx[]);
       if (gl.data) setGoals(gl.data as Goal[]);
       if (bg.data) setBudgets(bg.data as Budget[]);
     });
-  }, [user]);
+  }, [auth.user, demo.isDemo]);
 
   const stats = useMemo(() => {
     const income = transactions.filter(t => t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
@@ -203,8 +214,16 @@ const UserApp = () => {
               <p className="text-sm text-gray-400">{greeting()},</p>
               <h1 className="text-2xl sm:text-3xl font-display font-bold text-gray-900">{profile?.full_name || "Friend"} 👋</h1>
             </div>
-            <div className="flex items-center gap-2">
-              <NotificationCenter scanData={{ transactions, goals, budgets }} />
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              {demo.isDemo && (
+                <>
+                  <div className="px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-100 to-orange-100 border border-amber-200 text-[10px] font-bold text-amber-800 uppercase tracking-wider">
+                    Demo Data
+                  </div>
+                  <DemoPlanSwitcher compact />
+                </>
+              )}
+              {!demo.isDemo && <NotificationCenter scanData={{ transactions, goals, budgets }} />}
               <div className="px-3 py-1.5 rounded-full bg-white border border-gray-100 text-xs font-semibold text-gray-700 shadow-sm">
                 Lvl {profile?.level ?? 1} • {profile?.xp ?? 0} XP
               </div>
@@ -239,7 +258,7 @@ const UserApp = () => {
                     transactions={transactions}
                     onAdd={() => setShowTxForm(true)}
                     onDelete={async (id) => {
-                      await supabase.from("transactions").delete().eq("id", id);
+                      if (!demo.isDemo) await supabase.from("transactions").delete().eq("id", id);
                       setTransactions(prev => prev.filter(t => t.id !== id));
                       toast.success("Deleted");
                     }}
@@ -252,13 +271,13 @@ const UserApp = () => {
                       goals={goals}
                       onAdd={() => setShowGoalForm(true)}
                       onDelete={async (id) => {
-                        await supabase.from("goals").delete().eq("id", id);
+                        if (!demo.isDemo) await supabase.from("goals").delete().eq("id", id);
                         setGoals(prev => prev.filter(g => g.id !== id));
                       }}
                       onContribute={async (id, amount) => {
                         const g = goals.find(x => x.id === id); if (!g) return;
                         const newAmt = Math.min(Number(g.target_amount), Number(g.current_amount) + amount);
-                        await supabase.from("goals").update({ current_amount: newAmt }).eq("id", id);
+                        if (!demo.isDemo) await supabase.from("goals").update({ current_amount: newAmt }).eq("id", id);
                         setGoals(prev => prev.map(x => x.id === id ? { ...x, current_amount: newAmt } : x));
                         toast.success("Contribution added");
                       }}
@@ -272,7 +291,7 @@ const UserApp = () => {
                         onContribute={async (id, amount) => {
                           const g = goals.find(x => x.id === id); if (!g) return;
                           const newAmt = Math.min(Number(g.target_amount), Number(g.current_amount) + amount);
-                          await supabase.from("goals").update({ current_amount: newAmt }).eq("id", id);
+                          if (!demo.isDemo) await supabase.from("goals").update({ current_amount: newAmt }).eq("id", id);
                           setGoals(prev => prev.map(x => x.id === id ? { ...x, current_amount: newAmt } : x));
                           toast.success("Contribution added");
                         }}
@@ -313,6 +332,12 @@ const UserApp = () => {
                     tier={tier}
                     onUpgrade={() => openUpgrade(isPro ? "elite" : "pro")}
                     onCreateGoal={async (name, amount) => {
+                      if (demo.isDemo) {
+                        const newGoal: Goal = { id: `demo-goal-${Date.now()}`, goal_name: name, target_amount: amount, current_amount: 0, deadline: null, category: "AI Suggested" };
+                        setGoals(prev => [newGoal, ...prev]);
+                        toast.success(`Goal "${name}" created (demo)`);
+                        return;
+                      }
                       if (!user) return;
                       const { data: inserted, error } = await supabase.from("goals").insert({
                         user_id: user.id, goal_name: name, target_amount: amount, current_amount: 0, category: "AI Suggested",
@@ -324,14 +349,23 @@ const UserApp = () => {
                     onGoalContribute={async (id, amount) => {
                       const g = goals.find(x => x.id === id); if (!g) return;
                       const newAmt = Math.min(Number(g.target_amount), Number(g.current_amount) + amount);
-                      await supabase.from("goals").update({ current_amount: newAmt }).eq("id", id);
+                      if (!demo.isDemo) await supabase.from("goals").update({ current_amount: newAmt }).eq("id", id);
                       setGoals(prev => prev.map(x => x.id === id ? { ...x, current_amount: newAmt } : x));
                     }}
                   />
                 )}
                 {tab === "settings" && (
                   <div className="space-y-8">
-                    <SubscriptionPanel profile={profile} onUpgrade={() => openUpgrade(isPro ? "elite" : "pro")} />
+                    {demo.isDemo ? (
+                      <div className="glass-card bg-gradient-to-br from-indigo-50 via-white to-fuchsia-50 border border-indigo-100 rounded-3xl p-6">
+                        <p className="text-xs uppercase tracking-wider font-semibold text-indigo-500 mb-2">Demo Mode</p>
+                        <h3 className="font-display text-xl font-bold text-gray-900 mb-1">Preview every plan</h3>
+                        <p className="text-sm text-gray-600 mb-4">Switch between Basic, Pro, and Elite to see how each tier unlocks features across the app.</p>
+                        <DemoPlanSwitcher />
+                      </div>
+                    ) : (
+                      <SubscriptionPanel profile={profile} onUpgrade={() => openUpgrade(isPro ? "elite" : "pro")} />
+                    )}
                     <SettingsPanel profile={profile} onSaved={refreshProfile} onSignOut={handleSignOut} />
                   </div>
                 )}
@@ -363,6 +397,13 @@ const UserApp = () => {
       <AnimatePresence>
         {showTxForm && (
           <TxForm onClose={() => setShowTxForm(false)} onSave={async (data) => {
+            if (demo.isDemo) {
+              const inserted: Tx = { id: `demo-tx-${Date.now()}`, ...data };
+              setTransactions(prev => [inserted, ...prev]);
+              setShowTxForm(false);
+              toast.success("Transaction added (demo)");
+              return;
+            }
             if (!user) return;
             const { data: inserted, error } = await supabase.from("transactions").insert({ ...data, user_id: user.id }).select().single();
             if (error) { toast.error(error.message); return; }
@@ -373,6 +414,13 @@ const UserApp = () => {
         )}
         {showGoalForm && (
           <GoalForm onClose={() => setShowGoalForm(false)} onSave={async (data) => {
+            if (demo.isDemo) {
+              const inserted: Goal = { id: `demo-goal-${Date.now()}`, ...data, current_amount: 0 };
+              setGoals(prev => [inserted, ...prev]);
+              setShowGoalForm(false);
+              toast.success("Goal created (demo)");
+              return;
+            }
             if (!user) return;
             const { data: inserted, error } = await supabase.from("goals").insert({ ...data, user_id: user.id }).select().single();
             if (error) { toast.error(error.message); return; }
@@ -592,6 +640,7 @@ const SettingsPanel = ({ profile, onSaved, onSignOut }: any) => {
   const [currency, setCurrency] = useState(profile?.currency || "INR");
   const [persona, setPersona] = useState(profile?.selected_persona || "salary");
   const save = async () => {
+    if (profile?.id === "demo-user") { toast.info("Settings are read-only in Demo Mode."); return; }
     const { error } = await supabase.from("profiles").update({
       full_name: name, monthly_income: Number(income), currency, selected_persona: persona,
     }).eq("id", profile.id);
