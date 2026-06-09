@@ -640,6 +640,7 @@ const SettingsPanel = ({ profile, onSaved, onSignOut }: any) => {
   const [currency, setCurrency] = useState(profile?.currency || "INR");
   const [persona, setPersona] = useState(profile?.selected_persona || "salary");
   const save = async () => {
+    if (profile?.id === "demo-user") { toast.info("Settings are read-only in Demo Mode."); return; }
     const { error } = await supabase.from("profiles").update({
       full_name: name, monthly_income: Number(income), currency, selected_persona: persona,
     }).eq("id", profile.id);
