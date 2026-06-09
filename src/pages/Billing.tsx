@@ -99,7 +99,7 @@ export default function Billing() {
       </AnimatePresence>
 
       <div className="max-w-4xl mx-auto px-6 py-10">
-        <Link to="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 mb-6">
+        <Link to={user ? "/app" : "/dashboard"} className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 mb-6">
           <ArrowLeft className="w-4 h-4" /> Back to dashboard
         </Link>
 

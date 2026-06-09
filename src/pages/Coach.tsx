@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import TransitionOverlay from "@/components/ai/TransitionOverlay";
 import PersonaSelection from "@/components/ai/PersonaSelection";
@@ -10,6 +11,8 @@ type Phase = "transition" | "persona" | "mission";
 
 const Coach = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const homePath = user ? "/app" : "/dashboard";
   const [phase, setPhase] = useState<Phase>("transition");
   const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
 
@@ -32,11 +35,11 @@ const Coach = () => {
       setSelectedPersona(null);
       setPhase("persona");
     } else {
-      navigate("/dashboard");
+      navigate(homePath);
     }
   };
 
-  const handleExit = () => navigate("/dashboard");
+  const handleExit = () => navigate(homePath);
 
   return (
     <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-[#fafafa]">
