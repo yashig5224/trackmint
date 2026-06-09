@@ -324,6 +324,12 @@ const UserApp = () => {
                     tier={tier}
                     onUpgrade={() => openUpgrade(isPro ? "elite" : "pro")}
                     onCreateGoal={async (name, amount) => {
+                      if (demo.isDemo) {
+                        const newGoal: Goal = { id: `demo-goal-${Date.now()}`, goal_name: name, target_amount: amount, current_amount: 0, deadline: null, category: "AI Suggested" };
+                        setGoals(prev => [newGoal, ...prev]);
+                        toast.success(`Goal "${name}" created (demo)`);
+                        return;
+                      }
                       if (!user) return;
                       const { data: inserted, error } = await supabase.from("goals").insert({
                         user_id: user.id, goal_name: name, target_amount: amount, current_amount: 0, category: "AI Suggested",
@@ -335,7 +341,7 @@ const UserApp = () => {
                     onGoalContribute={async (id, amount) => {
                       const g = goals.find(x => x.id === id); if (!g) return;
                       const newAmt = Math.min(Number(g.target_amount), Number(g.current_amount) + amount);
-                      await supabase.from("goals").update({ current_amount: newAmt }).eq("id", id);
+                      if (!demo.isDemo) await supabase.from("goals").update({ current_amount: newAmt }).eq("id", id);
                       setGoals(prev => prev.map(x => x.id === id ? { ...x, current_amount: newAmt } : x));
                     }}
                   />
