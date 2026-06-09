@@ -14,6 +14,7 @@ import OnboardingFlow from "./components/auth/OnboardingFlow";
 import Pricing from "./pages/Pricing";
 import Billing from "./pages/Billing";
 import NotFound from "./pages/NotFound";
+import { DemoModeProvider } from "@/contexts/DemoModeContext";
 
 const queryClient = new QueryClient();
 
