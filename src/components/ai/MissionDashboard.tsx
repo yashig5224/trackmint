@@ -289,6 +289,28 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { tier, isPro, isElite } = useSubscription();
+  const { isDemo } = useDemoMode();
+
+  // Demo-mode snapshot — sent to ai-router so Lumo answers with realistic
+  // sample finances when no auth token is present.
+  const demoContext = useMemo(() => {
+    if (!isDemo) return undefined;
+    const monthAgo = new Date(); monthAgo.setDate(monthAgo.getDate() - 30);
+    const recent = DEMO_TRANSACTIONS.filter(t => new Date(t.transaction_date) >= monthAgo);
+    const totalSpent = recent.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+    const byCat = new Map<string, number>();
+    recent.filter(t => t.type === "expense" && t.category).forEach(t => {
+      byCat.set(t.category!, (byCat.get(t.category!) ?? 0) + t.amount);
+    });
+    const topCategories = [...byCat.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c]) => c);
+    const goals = DEMO_GOALS.map(g => `${g.goal_name} (₹${g.current_amount.toLocaleString("en-IN")}/₹${g.target_amount.toLocaleString("en-IN")})`);
+    return {
+      monthlyIncome: DEMO_PROFILE.monthly_income,
+      totalSpent: Math.round(totalSpent),
+      topCategories,
+      goals,
+    };
+  }, [isDemo]);
 
   // ── Plan-aware AI usage limiter (free only) ───────────────────────────────
   const [usage, setUsage] = useState(() => getAiUsage());
