@@ -13,6 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useSubscription, type PlanTier } from "@/hooks/useSubscription";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDemoMode } from "@/contexts/DemoModeContext";
+import { DEMO_TRANSACTIONS, DEMO_GOALS, DEMO_PROFILE } from "@/lib/demoData";
 import { UpgradeModal } from "@/components/payments/UpgradeModal";
 import { getAiUsage, consumeAiUsage, FREE_DAILY_LIMIT } from "@/lib/aiUsage";
 import LumoVoiceMode from "./LumoVoiceMode";
