@@ -24,6 +24,7 @@ import GoalIntelligencePanel from "@/components/dashboard/GoalIntelligencePanel"
 import InsightFeed from "@/components/dashboard/InsightFeed";
 import SubscriptionIntelligencePanel from "@/components/dashboard/SubscriptionIntelligencePanel";
 import SubscriptionPanel from "@/components/subscription/SubscriptionPanel";
+import BankingPanel from "@/components/banking/BankingPanel";
 import SubscriptionCard from "@/components/subscription/SubscriptionCard";
 import { useDemoMode } from "@/contexts/DemoModeContext";
 import { DEMO_TRANSACTIONS, DEMO_GOALS, DEMO_BUDGETS, DEMO_PROFILE } from "@/lib/demoData";
@@ -366,6 +367,7 @@ const UserApp = () => {
                     ) : (
                       <SubscriptionPanel profile={profile} onUpgrade={() => openUpgrade(isPro ? "elite" : "pro")} />
                     )}
+                    {!demo.isDemo && <BankingPanel />}
                     <SettingsPanel profile={profile} onSaved={refreshProfile} onSignOut={handleSignOut} />
                   </div>
                 )}
