@@ -227,6 +227,17 @@ const UserApp = () => {
                 </>
               )}
               {!demo.isDemo && <NotificationCenter scanData={{ transactions, goals, budgets }} />}
+              <button
+                onClick={() => setTab("settings")}
+                aria-label="Settings"
+                className={`lg:hidden w-9 h-9 rounded-full flex items-center justify-center border transition-colors ${
+                  tab === "settings"
+                    ? "bg-gray-900 text-white border-gray-900"
+                    : "bg-white text-gray-600 border-gray-100"
+                }`}
+              >
+                <Settings className="w-4 h-4" />
+              </button>
               <div className="px-3 py-1.5 rounded-full bg-white border border-gray-100 text-xs font-semibold text-gray-700 shadow-sm">
                 Lvl {profile?.level ?? 1} • {profile?.xp ?? 0} XP
               </div>
