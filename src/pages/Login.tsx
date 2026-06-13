@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowRight,
-  Sparkles,
   ShieldCheck,
   Wallet,
   ChevronRight,
@@ -11,152 +10,79 @@ import {
   Mail,
   Loader2,
   TrendingUp,
-  PiggyBank,
-  Coins,
   LineChart,
-  Bot,
+  Lock,
+  Eye,
+  EyeOff,
   Check,
+  CircleDollarSign,
+  BarChart3,
+  Sparkles,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import authBg from "@/assets/auth-bg.png";
-import LumoMascotShared, { type LumoTrigger } from "@/components/lumo/LumoMascot";
 
 /* ────────────────────────────────────────────────────────────── */
-/*  Animated background — mesh gradient orbs + drifting rupees    */
+/*  Subtle enterprise backdrop — soft mesh + dotted grid          */
 /* ────────────────────────────────────────────────────────────── */
-const AuroraBackdrop = ({ mode }: { mode: "in" | "up" }) => {
-  const palette =
-    mode === "in"
-      ? ["from-sky-200/60", "from-violet-200/60", "from-emerald-200/50"]
-      : ["from-emerald-200/60", "from-cyan-200/60", "from-amber-200/50"];
+const Backdrop = () => (
+  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    {/* Top-left wash */}
+    <div className="absolute -top-40 -left-40 w-[640px] h-[640px] rounded-full bg-gradient-to-br from-indigo-100/70 via-sky-100/40 to-transparent blur-3xl" />
+    {/* Bottom-right wash */}
+    <div className="absolute -bottom-40 -right-40 w-[640px] h-[640px] rounded-full bg-gradient-to-tr from-emerald-100/60 via-cyan-100/30 to-transparent blur-3xl" />
+    {/* Dotted grid */}
+    <div
+      className="absolute inset-0 opacity-[0.35]"
+      style={{
+        backgroundImage:
+          "radial-gradient(circle at 1px 1px, rgba(15,23,42,0.07) 1px, transparent 0)",
+        backgroundSize: "22px 22px",
+      }}
+    />
+  </div>
+);
 
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {/* Soft animated mesh blobs */}
-      <motion.div
-        key={mode + "-a"}
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1, x: [0, 40, -20, 0], y: [0, -30, 20, 0] }}
-        transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
-        className={`absolute -top-32 -left-24 w-[520px] h-[520px] rounded-full blur-3xl bg-gradient-to-br ${palette[0]} to-transparent`}
-      />
-      <motion.div
-        key={mode + "-b"}
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1, x: [0, -50, 30, 0], y: [0, 40, -20, 0] }}
-        transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
-        className={`absolute top-1/3 -right-32 w-[560px] h-[560px] rounded-full blur-3xl bg-gradient-to-br ${palette[1]} to-transparent`}
-      />
-      <motion.div
-        key={mode + "-c"}
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1, x: [0, 30, -40, 0], y: [0, -20, 30, 0] }}
-        transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
-        className={`absolute -bottom-40 left-1/4 w-[600px] h-[600px] rounded-full blur-3xl bg-gradient-to-br ${palette[2]} to-transparent`}
-      />
-
-      {/* Subtle grid */}
-      <div
-        className="absolute inset-0 opacity-[0.04]"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, #0f172a 1px, transparent 1px), linear-gradient(to bottom, #0f172a 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
-        }}
-      />
-    </div>
-  );
-};
-
-/* Drifting rupee/coin particles across the entire viewport */
-const MoneyParticles = () => {
-  const particles = useMemo(
-    () =>
-      Array.from({ length: 14 }).map((_, i) => ({
-        id: i,
-        left: `${(i * 67) % 100}%`,
-        delay: (i * 0.7) % 6,
-        duration: 9 + (i % 5),
-        size: 14 + ((i * 5) % 18),
-        symbol: i % 3 === 0 ? "₹" : i % 3 === 1 ? "•" : "◇",
-      })),
+/* ────────────────────────────────────────────────────────────── */
+/*  Floating finance glyphs — calm, slow, decorative              */
+/* ────────────────────────────────────────────────────────────── */
+const FloatingGlyphs = () => {
+  const glyphs = useMemo(
+    () => [
+      { Icon: TrendingUp, top: "12%", left: "8%", delay: 0, tint: "text-emerald-400/60" },
+      { Icon: BarChart3, top: "70%", left: "14%", delay: 1.2, tint: "text-sky-400/60" },
+      { Icon: CircleDollarSign, top: "22%", left: "78%", delay: 0.6, tint: "text-indigo-400/60" },
+      { Icon: LineChart, top: "62%", left: "82%", delay: 1.8, tint: "text-violet-400/60" },
+    ],
     []
   );
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
-      {particles.map((p) => (
-        <motion.span
-          key={p.id}
-          initial={{ y: "110%", opacity: 0 }}
-          animate={{ y: "-20%", opacity: [0, 0.35, 0] }}
-          transition={{ duration: p.duration, delay: p.delay, repeat: Infinity, ease: "easeInOut" }}
-          style={{ left: p.left, fontSize: p.size }}
-          className="absolute font-display font-bold bg-gradient-to-b from-sky-500/70 via-violet-500/50 to-transparent bg-clip-text text-transparent"
+    <div className="absolute inset-0 pointer-events-none hidden md:block">
+      {glyphs.map(({ Icon, top, left, delay, tint }, i) => (
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: [0, -10, 0] }}
+          transition={{
+            opacity: { duration: 0.8, delay },
+            y: { duration: 6 + i, repeat: Infinity, ease: "easeInOut", delay },
+          }}
+          style={{ top, left }}
+          className={`absolute ${tint}`}
         >
-          {p.symbol}
-        </motion.span>
+          <Icon className="w-10 h-10" strokeWidth={1.2} />
+        </motion.div>
       ))}
     </div>
   );
 };
 
 /* ────────────────────────────────────────────────────────────── */
-/*  Left panel — Lumo mascot + floating insight cards             */
+/*  Clean input with floating label                               */
 /* ────────────────────────────────────────────────────────────── */
-const InsightCard = ({
-  delay,
-  className,
-  children,
-}: {
-  delay: number;
-  className: string;
-  children: React.ReactNode;
-}) => (
-  <motion.div
-    initial={{ opacity: 0, y: 24, scale: 0.92 }}
-    animate={{ opacity: 1, y: [0, -10, 0], scale: 1 }}
-    transition={{
-      opacity: { duration: 0.6, delay },
-      scale: { duration: 0.6, delay },
-      y: { duration: 6 + delay, repeat: Infinity, ease: "easeInOut", delay },
-    }}
-    className={`absolute backdrop-blur-2xl bg-white/70 border border-white/80 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.18)] rounded-2xl px-4 py-3 ${className}`}
-  >
-    {children}
-  </motion.div>
-);
-
-const LumoMascot = ({
-  submitting,
-  waving,
-  errored,
-}: {
-  isSignUp: boolean;
-  submitting: boolean;
-  waving: boolean;
-  errored?: boolean;
-}) => {
-  const trigger: LumoTrigger = errored
-    ? "error"
-    : waving
-    ? "success"
-    : submitting
-    ? "loading"
-    : "idle";
-  return (
-    <div className="relative">
-      <LumoMascotShared trigger={trigger} size={220} />
-    </div>
-  );
-};
-
-/* ────────────────────────────────────────────────────────────── */
-/*  Animated input with floating label + focus glow               */
-/* ────────────────────────────────────────────────────────────── */
-const FancyInput = ({
+const Field = ({
   icon: Icon,
   label,
   type = "text",
@@ -165,6 +91,9 @@ const FancyInput = ({
   required,
   minLength,
   autoComplete,
+  showToggle,
+  toggled,
+  onToggle,
 }: {
   icon: any;
   label: string;
@@ -174,120 +103,77 @@ const FancyInput = ({
   required?: boolean;
   minLength?: number;
   autoComplete?: string;
+  showToggle?: boolean;
+  toggled?: boolean;
+  onToggle?: () => void;
 }) => {
   const [focus, setFocus] = useState(false);
   const filled = value.length > 0;
   return (
     <div className="relative">
-      <motion.div
-        animate={{
-          boxShadow: focus
-            ? "0 0 0 4px rgba(99,102,241,0.12), 0 8px 24px -8px rgba(99,102,241,0.35)"
-            : "0 0 0 0px rgba(0,0,0,0)",
-        }}
-        className="relative rounded-2xl"
+      <Icon
+        className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors ${
+          focus ? "text-slate-900" : "text-slate-400"
+        }`}
+        strokeWidth={1.8}
+      />
+      <input
+        type={type}
+        required={required}
+        minLength={minLength}
+        autoComplete={autoComplete}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setFocus(true)}
+        onBlur={() => setFocus(false)}
+        className="peer w-full pl-10 pr-10 pt-5 pb-2 rounded-xl border border-slate-200 bg-white focus:border-slate-900 focus:ring-2 focus:ring-slate-900/5 outline-none transition-all text-slate-900 text-sm"
+      />
+      <label
+        className={`pointer-events-none absolute left-10 transition-all ${
+          focus || filled
+            ? "top-1 text-[10px] uppercase tracking-wider font-semibold text-slate-500"
+            : "top-1/2 -translate-y-1/2 text-sm text-slate-400"
+        }`}
       >
-        <Icon
-          className={`w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
-            focus ? "text-indigo-500" : "text-slate-400"
-          }`}
-        />
-        <input
-          type={type}
-          required={required}
-          minLength={minLength}
-          autoComplete={autoComplete}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onFocus={() => setFocus(true)}
-          onBlur={() => setFocus(false)}
-          className="peer w-full pl-12 pr-4 pt-5 pb-2 rounded-2xl border border-slate-200/80 bg-white/70 backdrop-blur-md focus:bg-white focus:border-indigo-400 outline-none transition-all text-slate-900"
-        />
-        <label
-          className={`pointer-events-none absolute left-12 transition-all ${
-            focus || filled
-              ? "top-1.5 text-[10px] uppercase tracking-wider font-semibold text-indigo-500"
-              : "top-1/2 -translate-y-1/2 text-sm text-slate-400"
-          }`}
+        {label}
+      </label>
+      {showToggle && (
+        <button
+          type="button"
+          onClick={onToggle}
+          tabIndex={-1}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
         >
-          {label}
-        </label>
-        {filled && type !== "password" && (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center"
-          >
-            <Check className="w-3 h-3" />
-          </motion.div>
-        )}
-      </motion.div>
+          {toggled ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        </button>
+      )}
+      {!showToggle && filled && (
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center"
+        >
+          <Check className="w-2.5 h-2.5" strokeWidth={3} />
+        </motion.div>
+      )}
     </div>
   );
 };
 
 /* ────────────────────────────────────────────────────────────── */
-/*  Money burst on submit — radial particle explosion             */
+/*  Login / Signup / Reset                                        */
 /* ────────────────────────────────────────────────────────────── */
-const MoneyBurst = ({ show }: { show: boolean }) => {
-  const items = useMemo(
-    () => Array.from({ length: 18 }).map((_, i) => ({ id: i, a: (i / 18) * Math.PI * 2 })),
-    []
-  );
-  return (
-    <AnimatePresence>
-      {show && (
-        <div className="fixed inset-0 z-[60] pointer-events-none flex items-center justify-center">
-          {items.map((p) => (
-            <motion.span
-              key={p.id}
-              initial={{ x: 0, y: 0, opacity: 1, scale: 0.6 }}
-              animate={{
-                x: Math.cos(p.a) * 380,
-                y: Math.sin(p.a) * 380,
-                opacity: 0,
-                scale: 1.4,
-                rotate: 360,
-              }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 1.2, ease: "easeOut" }}
-              className="absolute font-display font-bold text-3xl bg-gradient-to-br from-sky-500 via-violet-500 to-emerald-500 bg-clip-text text-transparent"
-            >
-              ₹
-            </motion.span>
-          ))}
-        </div>
-      )}
-    </AnimatePresence>
-  );
-};
+type Mode = "in" | "up" | "reset";
 
-/* ────────────────────────────────────────────────────────────── */
-/*  Main page                                                     */
-/* ────────────────────────────────────────────────────────────── */
 const Login = () => {
   const navigate = useNavigate();
   const { user, profile, loading: authLoading } = useAuth();
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [mode, setMode] = useState<Mode>("in");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [burst, setBurst] = useState(false);
-
-  // Cursor parallax
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const sx = useSpring(mx, { stiffness: 60, damping: 20 });
-  const sy = useSpring(my, { stiffness: 60, damping: 20 });
-  const tiltX = useTransform(sy, [-1, 1], [6, -6]);
-  const tiltY = useTransform(sx, [-1, 1], [-6, 6]);
-
-  const onMouseMove = (e: React.MouseEvent) => {
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    mx.set(((e.clientX - r.left) / r.width) * 2 - 1);
-    my.set(((e.clientY - r.top) / r.height) * 2 - 1);
-  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -306,7 +192,7 @@ const Login = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      if (isSignUp) {
+      if (mode === "up") {
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -316,15 +202,20 @@ const Login = () => {
           },
         });
         if (error) throw error;
-        setBurst(true);
-        setTimeout(() => setBurst(false), 2600);
-        toast.success(`Welcome to your AI financial universe${fullName ? ", " + fullName.split(" ")[0] : ""} ✨`);
-      } else {
+        toast.success(
+          `Welcome${fullName ? ", " + fullName.split(" ")[0] : ""}! Check your email to confirm.`
+        );
+      } else if (mode === "in") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        setBurst(true);
-        setTimeout(() => setBurst(false), 2600);
-        toast.success("Welcome back!");
+        toast.success("Welcome back");
+      } else {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        toast.success("Password reset link sent. Check your inbox.");
+        setMode("in");
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
@@ -345,326 +236,318 @@ const Login = () => {
     }
   };
 
+  const strength =
+    (password.length >= 8 ? 1 : 0) +
+    (/[A-Z]/.test(password) ? 1 : 0) +
+    (/[0-9]/.test(password) ? 1 : 0) +
+    (/[^A-Za-z0-9]/.test(password) ? 1 : 0);
+  const strengthLabel = ["Too short", "Weak", "Fair", "Good", "Strong"][strength];
+  const strengthColor = [
+    "bg-slate-200",
+    "bg-rose-400",
+    "bg-amber-400",
+    "bg-sky-500",
+    "bg-emerald-500",
+  ][strength];
+
+  const heading =
+    mode === "in" ? "Welcome back" : mode === "up" ? "Create your account" : "Reset password";
+  const sub =
+    mode === "in"
+      ? "Sign in to your FinTrack workspace."
+      : mode === "up"
+      ? "Start your AI-powered financial workspace."
+      : "We'll email you a secure reset link.";
+  const cta =
+    mode === "in"
+      ? "Sign in"
+      : mode === "up"
+      ? "Create account"
+      : "Send reset link";
+
   return (
-    <div
-      onMouseMove={onMouseMove}
-      className="min-h-screen relative bg-gradient-to-br from-white via-sky-50/40 to-violet-50/40 overflow-hidden"
-    >
-      {/* Uploaded immersive scene background */}
-      <div className="absolute inset-0 pointer-events-none">
-        <img
-          src={authBg}
-          alt=""
-          className="w-full h-full object-cover"
-          style={{ objectPosition: "center" }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-br from-white/55 via-white/40 to-white/70" />
-      </div>
-      <AuroraBackdrop mode={isSignUp ? "up" : "in"} />
-      <MoneyParticles />
-      <MoneyBurst show={burst} />
+    <div className="min-h-screen relative bg-[#fafafa] flex">
+      <Backdrop />
+      <FloatingGlyphs />
 
-      <div className="relative z-10 flex min-h-screen">
-        {/* ─────────── LEFT — immersive visual ─────────── */}
-        <div className="hidden lg:flex w-1/2 relative items-center justify-center p-12">
-          <motion.div
-            style={{ rotateX: tiltX, rotateY: tiltY, transformPerspective: 1200 }}
-            className="relative w-full max-w-xl"
-          >
-            <Link to="/" className="inline-flex items-center gap-2 mb-10">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500 via-violet-500 to-sky-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-                <Sparkles className="w-5 h-5 text-white" />
+      {/* ─────────── LEFT — brand & trust panel (desktop) ─────────── */}
+      <div className="hidden lg:flex w-1/2 relative flex-col justify-between p-12 xl:p-16">
+        <Link to="/" className="relative inline-flex items-center gap-2.5 w-fit">
+          <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center">
+            <Sparkles className="w-4.5 h-4.5 text-white" strokeWidth={2} />
+          </div>
+          <span className="font-display text-xl font-semibold tracking-tight text-slate-900">
+            FinTrack AI
+          </span>
+        </Link>
+
+        <div className="relative max-w-md">
+          <h1 className="text-4xl xl:text-5xl font-display font-semibold leading-[1.1] tracking-tight text-slate-900">
+            The financial OS for modern operators.
+          </h1>
+          <p className="mt-5 text-base text-slate-500 leading-relaxed">
+            Connect accounts, automate categorisation, and let your AI coach
+            uncover savings — all in one calm, fast workspace.
+          </p>
+
+          {/* Trust card */}
+          <div className="mt-10 rounded-2xl border border-slate-200 bg-white/70 backdrop-blur-xl p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_40px_-20px_rgba(15,23,42,0.18)]">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <ShieldCheck className="w-5 h-5" strokeWidth={1.8} />
               </div>
-              <span className="font-display text-2xl font-bold tracking-tight text-slate-900">
-                FinTrack AI
-              </span>
-            </Link>
-
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="text-5xl xl:text-6xl font-display font-bold leading-[1.05] tracking-tight text-slate-900"
-            >
-              Enter your <br />
-              <span className="bg-gradient-to-r from-indigo-600 via-violet-500 to-sky-500 bg-clip-text text-transparent">
-                financial universe.
-              </span>
-            </motion.h1>
-            <p className="mt-6 text-lg text-slate-500 max-w-md leading-relaxed">
-              Personalized AI coaching, real-time insights and gamified goals — all built around{" "}
-              <em>your</em> money.
-            </p>
-
-            {/* Mascot stage */}
-            <div className="relative h-[360px] mt-10">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <LumoMascot isSignUp={isSignUp} submitting={submitting} waving={burst} />
+              <div>
+                <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
+                  Bank-grade security
+                </div>
+                <div className="text-sm font-medium text-slate-900">
+                  256-bit encryption · SOC 2 ready
+                </div>
               </div>
-
-              <InsightCard delay={0.2} className="top-2 left-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                    <TrendingUp className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
-                      Saved this week
-                    </div>
-                    <div className="text-sm font-bold text-slate-900">+ ₹2,480</div>
-                  </div>
-                </div>
-              </InsightCard>
-
-              <InsightCard delay={0.5} className="top-10 right-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center">
-                    <LineChart className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
-                      Budget health
-                    </div>
-                    <div className="text-sm font-bold text-slate-900">82 / 100 ↑</div>
-                  </div>
-                </div>
-              </InsightCard>
-
-              <InsightCard delay={0.8} className="bottom-6 left-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center">
-                    <Bot className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
-                      Lumo insight
-                    </div>
-                    <div className="text-sm font-bold text-slate-900">3 ways to save ₹1.2k</div>
-                  </div>
-                </div>
-              </InsightCard>
-
-              <InsightCard delay={1.1} className="bottom-0 right-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
-                    <PiggyBank className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
-                      Goal: Macbook
-                    </div>
-                    <div className="text-sm font-bold text-slate-900">64% complete</div>
-                  </div>
-                </div>
-              </InsightCard>
             </div>
-          </motion.div>
+            <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+              {[
+                { k: "Users", v: "24k+" },
+                { k: "Saved", v: "₹3.2Cr" },
+                { k: "Uptime", v: "99.99%" },
+              ].map((s) => (
+                <div key={s.k} className="rounded-lg border border-slate-100 bg-white py-2">
+                  <div className="text-sm font-semibold text-slate-900">{s.v}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-slate-400">
+                    {s.k}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {/* ─────────── RIGHT — auth panel ─────────── */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-6 relative">
-          <Link
-            to="/"
-            className="lg:hidden absolute top-6 left-6 inline-flex items-center gap-2"
-          >
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-sky-500 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-display text-xl font-bold tracking-tight">FinTrack AI</span>
+        <div className="relative text-xs text-slate-400 flex items-center gap-4">
+          <span>© FinTrack AI</span>
+          <span className="w-1 h-1 rounded-full bg-slate-300" />
+          <Link to="/" className="hover:text-slate-700 transition-colors">
+            Back to site
           </Link>
+        </div>
+      </div>
 
-          <motion.div
-            layout
-            transition={{ type: "spring", stiffness: 200, damping: 26 }}
-            style={{ rotateX: useTransform(sy, [-1, 1], [3, -3]), rotateY: useTransform(sx, [-1, 1], [-3, 3]), transformPerspective: 1200 }}
-            className="w-full max-w-md relative"
-          >
-            {/* Animated gradient outline */}
-            <div className="absolute -inset-px rounded-[34px] bg-gradient-to-br from-indigo-300/60 via-violet-300/60 to-sky-300/60 blur-md opacity-70" />
-            <motion.div
-              layout
-              className="relative bg-white/80 backdrop-blur-2xl border border-white rounded-[32px] p-8 sm:p-10 shadow-[0_30px_80px_-30px_rgba(79,70,229,0.35)]"
-            >
-              {/* Mode toggle pill */}
-              <div className="relative mb-8 p-1 rounded-full bg-slate-100/80 grid grid-cols-2 text-sm font-medium">
+      {/* ─────────── RIGHT — auth panel ─────────── */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-5 sm:p-8 relative">
+        <Link
+          to="/"
+          className="lg:hidden absolute top-5 left-5 inline-flex items-center gap-2"
+        >
+          <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center">
+            <Sparkles className="w-4 h-4 text-white" />
+          </div>
+          <span className="font-display text-lg font-semibold tracking-tight">
+            FinTrack AI
+          </span>
+        </Link>
+
+        <div className="w-full max-w-md relative">
+          {/* Card */}
+          <div className="relative bg-white/80 backdrop-blur-xl border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_24px_60px_-30px_rgba(15,23,42,0.25)]">
+            {/* Mode tabs (only for in/up) */}
+            {mode !== "reset" && (
+              <div className="relative mb-7 p-1 rounded-lg bg-slate-100 grid grid-cols-2 text-sm font-medium">
                 <motion.div
                   layout
                   transition={{ type: "spring", stiffness: 400, damping: 32 }}
-                  className="absolute top-1 bottom-1 w-1/2 rounded-full bg-white shadow-[0_4px_20px_-4px_rgba(15,23,42,0.15)]"
-                  style={{ left: isSignUp ? "50%" : "0.25rem", right: isSignUp ? "0.25rem" : "50%" }}
+                  className="absolute top-1 bottom-1 w-[calc(50%-0.25rem)] rounded-md bg-white shadow-sm"
+                  style={{ left: mode === "up" ? "calc(50% + 0.125rem)" : "0.25rem" }}
                 />
                 <button
                   type="button"
-                  onClick={() => setIsSignUp(false)}
-                  className={`relative z-10 py-2 rounded-full transition-colors ${
-                    !isSignUp ? "text-slate-900" : "text-slate-500"
+                  onClick={() => setMode("in")}
+                  className={`relative z-10 py-2 rounded-md transition-colors ${
+                    mode === "in" ? "text-slate-900" : "text-slate-500"
                   }`}
                 >
-                  Sign In
+                  Sign in
                 </button>
                 <button
                   type="button"
-                  onClick={() => setIsSignUp(true)}
-                  className={`relative z-10 py-2 rounded-full transition-colors ${
-                    isSignUp ? "text-slate-900" : "text-slate-500"
+                  onClick={() => setMode("up")}
+                  className={`relative z-10 py-2 rounded-md transition-colors ${
+                    mode === "up" ? "text-slate-900" : "text-slate-500"
                   }`}
                 >
-                  Create Account
+                  Sign up
                 </button>
               </div>
+            )}
 
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={isSignUp ? "up" : "in"}
-                  initial={{ opacity: 0, y: 12, filter: "blur(6px)" }}
-                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                  exit={{ opacity: 0, y: -12, filter: "blur(6px)" }}
-                  transition={{ duration: 0.35 }}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={mode}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25 }}
+              >
+                <h2 className="text-2xl sm:text-[28px] font-display font-semibold tracking-tight text-slate-900">
+                  {heading}
+                </h2>
+                <p className="mt-1.5 text-sm text-slate-500">{sub}</p>
+              </motion.div>
+            </AnimatePresence>
+
+            {mode !== "reset" && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleGoogle}
+                  disabled={submitting}
+                  className="w-full mt-6 mb-4 py-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center justify-center gap-2.5 text-sm font-medium text-slate-700 disabled:opacity-50"
                 >
-                  <h2 className="text-3xl font-display font-bold text-slate-900 mb-1">
-                    {isSignUp ? "Start your journey" : "Welcome back"}
-                  </h2>
-                  <p className="text-slate-500 mb-8">
-                    {isSignUp
-                      ? "Your AI finance coach is waiting."
-                      : "Sign in to enter your dashboard."}
-                  </p>
-                </motion.div>
+                  <svg width="16" height="16" viewBox="0 0 18 18">
+                    <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" />
+                    <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" />
+                    <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" />
+                    <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" />
+                  </svg>
+                  Continue with Google
+                </button>
+
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex-1 h-px bg-slate-200" />
+                  <span className="text-[10px] uppercase tracking-[0.18em] text-slate-400 font-semibold">
+                    or
+                  </span>
+                  <div className="flex-1 h-px bg-slate-200" />
+                </div>
+              </>
+            )}
+
+            <form onSubmit={handleSubmit} className={mode === "reset" ? "mt-6 space-y-3.5" : "space-y-3.5"}>
+              <AnimatePresence initial={false}>
+                {mode === "up" && (
+                  <motion.div
+                    key="name"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.25 }}
+                  >
+                    <Field
+                      icon={User}
+                      label="Full name"
+                      value={fullName}
+                      onChange={setFullName}
+                      required
+                      autoComplete="name"
+                    />
+                  </motion.div>
+                )}
               </AnimatePresence>
 
-              <button
-                type="button"
-                onClick={handleGoogle}
-                disabled={submitting}
-                className="w-full mb-5 py-3.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 transition-all flex items-center justify-center gap-2 text-sm font-medium text-slate-700 disabled:opacity-50 hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-                  <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
-                  <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
-                  <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
-                  <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
-                </svg>
-                Continue with Google
-              </button>
+              <Field
+                icon={Mail}
+                label="Email address"
+                type="email"
+                value={email}
+                onChange={setEmail}
+                required
+                autoComplete="email"
+              />
 
-              <div className="flex items-center gap-3 mb-5">
-                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-                <span className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-semibold">
-                  or with email
-                </span>
-                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <AnimatePresence initial={false}>
-                  {isSignUp && (
-                    <motion.div
-                      key="name"
-                      initial={{ opacity: 0, height: 0, y: -8 }}
-                      animate={{ opacity: 1, height: "auto", y: 0 }}
-                      exit={{ opacity: 0, height: 0, y: -8 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <FancyInput
-                        icon={User}
-                        label="Full name"
-                        value={fullName}
-                        onChange={setFullName}
-                        required
-                        autoComplete="name"
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <FancyInput
-                  icon={Mail}
-                  label="Email address"
-                  type="email"
-                  value={email}
-                  onChange={setEmail}
-                  required
-                  autoComplete="email"
-                />
-
-                <FancyInput
-                  icon={ShieldCheck}
+              {mode !== "reset" && (
+                <Field
+                  icon={Lock}
                   label="Password"
-                  type="password"
+                  type={showPwd ? "text" : "password"}
                   value={password}
                   onChange={setPassword}
                   required
                   minLength={6}
-                  autoComplete={isSignUp ? "new-password" : "current-password"}
+                  autoComplete={mode === "up" ? "new-password" : "current-password"}
+                  showToggle
+                  toggled={showPwd}
+                  onToggle={() => setShowPwd((v) => !v)}
                 />
+              )}
 
-                {/* Password strength */}
-                {isSignUp && password.length > 0 && (
-                  <div className="flex gap-1.5 px-1">
-                    {[0, 1, 2, 3].map((i) => {
-                      const strength =
-                        (password.length >= 6 ? 1 : 0) +
-                        (/[A-Z]/.test(password) ? 1 : 0) +
-                        (/[0-9]/.test(password) ? 1 : 0) +
-                        (/[^A-Za-z0-9]/.test(password) ? 1 : 0);
-                      return (
-                        <motion.div
+              {/* Password strength */}
+              <AnimatePresence>
+                {mode === "up" && password.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-1.5 px-0.5"
+                  >
+                    <div className="flex gap-1.5">
+                      {[0, 1, 2, 3].map((i) => (
+                        <div
                           key={i}
-                          initial={{ scaleX: 0 }}
-                          animate={{ scaleX: i < strength ? 1 : 0.15 }}
-                          className={`h-1 flex-1 rounded-full origin-left ${
-                            i < strength
-                              ? "bg-gradient-to-r from-indigo-500 to-emerald-500"
-                              : "bg-slate-200"
+                          className={`h-1 flex-1 rounded-full transition-colors ${
+                            i < strength ? strengthColor : "bg-slate-200"
                           }`}
                         />
-                      );
-                    })}
-                  </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-400">
+                      <span>Password strength</span>
+                      <span className="font-medium text-slate-600">{strengthLabel}</span>
+                    </div>
+                  </motion.div>
                 )}
+              </AnimatePresence>
 
-                <motion.button
-                  whileHover={{ y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                  type="submit"
-                  disabled={submitting}
-                  className="relative overflow-hidden w-full text-white py-4 rounded-2xl font-medium text-sm flex items-center justify-center gap-2 mt-2 shadow-[0_15px_40px_-10px_rgba(79,70,229,0.6)] disabled:opacity-60 bg-gradient-to-r from-indigo-600 via-violet-600 to-sky-500"
+              {mode === "in" && (
+                <div className="flex justify-end -mt-1">
+                  <button
+                    type="button"
+                    onClick={() => setMode("reset")}
+                    className="text-xs text-slate-500 hover:text-slate-900 transition-colors"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              )}
+
+              <motion.button
+                whileTap={{ scale: 0.99 }}
+                type="submit"
+                disabled={submitting}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2 mt-2 transition-colors disabled:opacity-60"
+              >
+                {submitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    {cta}
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </motion.button>
+
+              {mode === "reset" && (
+                <button
+                  type="button"
+                  onClick={() => setMode("in")}
+                  className="w-full text-center text-xs text-slate-500 hover:text-slate-900 transition-colors pt-1"
                 >
-                  {/* shine sweep */}
-                  <motion.span
-                    aria-hidden
-                    initial={{ x: "-150%" }}
-                    animate={{ x: "150%" }}
-                    transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12"
-                  />
-                  {submitting ? (
-                    <Loader2 className="w-4 h-4 animate-spin relative" />
-                  ) : (
-                    <span className="relative inline-flex items-center gap-2">
-                      {isSignUp ? "Start your financial journey" : "Continue to FinTrack AI"}
-                      <ArrowRight className="w-4 h-4" />
-                    </span>
-                  )}
-                </motion.button>
-              </form>
+                  ← Back to sign in
+                </button>
+              )}
+            </form>
 
-              <div className="mt-6 text-center">
-                <Link
-                  to="/dashboard"
-                  className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-700 transition-colors"
-                >
-                  <Wallet className="w-3 h-3" /> Continue as demo guest
-                  <ChevronRight className="w-3 h-3" />
-                </Link>
-              </div>
-
-              <div className="mt-6 flex items-center justify-center gap-2 text-[11px] text-slate-400">
-                <Coins className="w-3 h-3" />
-                <span>Bank-grade encryption · Your data stays yours</span>
-              </div>
-            </motion.div>
-          </motion.div>
+            <div className="mt-6 pt-5 border-t border-slate-100 flex flex-col items-center gap-3">
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-900 transition-colors"
+              >
+                <Wallet className="w-3.5 h-3.5" /> Continue as demo guest
+                <ChevronRight className="w-3 h-3" />
+              </Link>
+              <p className="text-[10px] text-slate-400 text-center leading-relaxed">
+                By continuing you agree to our Terms and acknowledge our Privacy
+                Policy. Bank-grade encryption · Your data stays yours.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
