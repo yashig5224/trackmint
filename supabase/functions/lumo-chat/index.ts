@@ -1,4 +1,6 @@
 // Lumo AI chat — Lovable AI Gateway (no API keys required from user)
+import { createClient } from "npm:@supabase/supabase-js@2";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -10,9 +12,48 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const sb = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData, error: userErr } = await sb.auth.getUser(token);
+    if (userErr || !userData?.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userId = userData.user.id;
+
+    // Server-side daily AI usage quota based on profile.ai_usage_limit
+    const { data: profile } = await sb
+      .from("profiles").select("ai_usage_limit").eq("id", userId).maybeSingle();
+    const limit = Number((profile as any)?.ai_usage_limit ?? 10);
+    const startOfDay = new Date(); startOfDay.setUTCHours(0, 0, 0, 0);
+    const { count: usedToday } = await sb
+      .from("ai_history")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .gte("created_at", startOfDay.toISOString());
+    if ((usedToday ?? 0) >= limit) {
+      return new Response(JSON.stringify({ error: "Daily AI limit reached. Upgrade for more." }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { message, persona, history = [], context } = await req.json();
     if (!message || typeof message !== "string") {
       return new Response(JSON.stringify({ error: "message required" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
