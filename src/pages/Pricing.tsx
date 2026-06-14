@@ -7,6 +7,7 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import AmbientLayer from "@/components/landing/AmbientLayer";
 import { PLANS, COMPARISON_ROWS, FAQ_ITEMS, BillingCycle, Plan } from "@/lib/plans";
+import SEO from "@/components/seo/SEO";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -104,6 +105,37 @@ export default function Pricing() {
 
   return (
     <div className="min-h-screen bg-[#fafafa] text-slate-900 relative">
+      <SEO
+        title="Pricing — FinTrack AI Free, Pro & Elite plans"
+        description="Compare FinTrack AI plans: Free, Pro AI (₹299/mo) and Elite AI+ (₹799/mo). AI budget planner, multi-model coach, automation, forecasting, and bank sync."
+        path="/pricing"
+        jsonLd={[
+          {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: FAQ_ITEMS.map((f) => ({
+              "@type": "Question",
+              name: f.q,
+              acceptedAnswer: { "@type": "Answer", text: f.a },
+            })),
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: "FinTrack AI",
+            description: "AI-powered personal finance with automated tracking, goals, budgets and a multi-model AI financial coach.",
+            brand: { "@type": "Brand", name: "FinTrack AI" },
+            offers: PLANS.filter((p) => p.priceMonthly > 0).map((p) => ({
+              "@type": "Offer",
+              name: p.name,
+              price: p.priceMonthly,
+              priceCurrency: "INR",
+              url: "https://finbee.lovable.app/pricing",
+              category: "subscription",
+            })),
+          },
+        ]}
+      />
       <AmbientLayer />
       <Navbar />
 
