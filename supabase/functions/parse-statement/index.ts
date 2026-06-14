@@ -4,10 +4,13 @@
 // Body: { fileBase64: string, fileName: string, mimeType?: string }
 // Returns: { bank, accountHint, currency, transactions: [...] }
 
+import { createClient } from "npm:@supabase/supabase-js@2";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
 
 const SYSTEM_PROMPT = `You are a financial-statement parser for Indian + global banks
 (HDFC, ICICI, SBI, Axis, Kotak, IDFC, Yes Bank, AU Bank, Plaid/Tink exports, credit-card statements, etc.).
