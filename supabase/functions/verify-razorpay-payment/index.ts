@@ -54,17 +54,42 @@ Deno.serve(async (req) => {
     const userId = userData.user.id;
 
     const body = await req.json();
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, planKey, planName, cycle, tier, amount } = body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = body;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return new Response(JSON.stringify({ error: "Missing payment fields" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    const keyId = Deno.env.get("RAZORPAY_KEY_ID")!;
     const keySecret = Deno.env.get("RAZORPAY_KEY_SECRET")!;
     const expected = await hmacSha256Hex(keySecret, `${razorpay_order_id}|${razorpay_payment_id}`);
     if (expected !== razorpay_signature) {
       return new Response(JSON.stringify({ error: "Invalid signature" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
+    // Re-fetch the original order from Razorpay — server-side source of truth
+    // for tier/planKey/amount. Client-supplied values are ignored.
+    const orderRes = await fetch(`https://api.razorpay.com/v1/orders/${razorpay_order_id}`, {
+      headers: { Authorization: `Basic ${btoa(`${keyId}:${keySecret}`)}` },
+    });
+    const order = await orderRes.json();
+    if (!orderRes.ok) {
+      console.error("Razorpay order fetch failed", order);
+      return new Response(JSON.stringify({ error: "Order verification failed" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const notes = order?.notes ?? {};
+    if (notes.userId !== userId) {
+      return new Response(JSON.stringify({ error: "Order does not belong to user" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const planKey: string = notes.planKey;
+    const plan = PLAN_AMOUNTS[planKey];
+    if (!plan || Number(order.amount) !== plan.amount) {
+      return new Response(JSON.stringify({ error: "Plan/amount mismatch" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const planName = plan.name;
+    const cycle = plan.cycle;
+    const tier = plan.tier;
+    const amount = plan.amount;
 
     // Admin client (service role) to bypass RLS for cross-table writes
     const admin = createClient(
