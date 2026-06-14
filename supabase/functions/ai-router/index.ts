@@ -367,17 +367,24 @@ Deno.serve(async (req) => {
     }
 
     const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const sb = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } },
     );
 
-    let userId: string | null = null;
-    if (authHeader.startsWith("Bearer ")) {
-      const token = authHeader.replace("Bearer ", "");
-      const { data } = await sb.auth.getClaims(token);
-      userId = (data?.claims?.sub as string) ?? null;
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsErr } = await sb.auth.getClaims(token);
+    const userId = (claimsData?.claims?.sub as string) ?? null;
+    if (claimsErr || !userId) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const { message, persona = {}, history = [], context, model: requestedModel = "auto" } =
@@ -388,7 +395,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const tier: PlanTier = userId ? await resolveTier(sb, userId) : "free";
+    const tier: PlanTier = await resolveTier(sb, userId);
     const allowed = allowedProviders(tier);
 
     // ── Build snapshot (authed users get real data, demo gets client-provided)
