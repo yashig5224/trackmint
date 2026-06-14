@@ -10,8 +10,19 @@ const corsHeaders = {
 
 const TIER_LIMITS: Record<string, { ai_usage_limit: number; voice_enabled: boolean; premium_enabled: boolean }> = {
   free:   { ai_usage_limit: 10,   voice_enabled: false, premium_enabled: false },
+  starter:{ ai_usage_limit: 100,  voice_enabled: false, premium_enabled: false },
   pro:    { ai_usage_limit: 9999, voice_enabled: false, premium_enabled: true  },
   elite:  { ai_usage_limit: 99999,voice_enabled: true,  premium_enabled: true  },
+};
+
+// Server-side source of truth for plan amounts/tier — never trust the client.
+const PLAN_AMOUNTS: Record<string, { amount: number; name: string; cycle: "monthly" | "yearly"; tier: "pro" | "elite" | "starter" }> = {
+  starter_monthly: { amount: 29900, name: "Starter", cycle: "monthly", tier: "starter" },
+  pro_monthly:     { amount: 29900, name: "Pro AI", cycle: "monthly", tier: "pro" },
+  pro_yearly:      { amount: 299900, name: "Pro AI", cycle: "yearly", tier: "pro" },
+  elite_monthly:   { amount: 79900, name: "Elite AI+", cycle: "monthly", tier: "elite" },
+  elite_yearly:    { amount: 799900, name: "Elite AI+", cycle: "yearly", tier: "elite" },
+  ultimate_monthly:{ amount: 149900, name: "Ultimate AI", cycle: "monthly", tier: "elite" },
 };
 
 async function hmacSha256Hex(secret: string, message: string): Promise<string> {
