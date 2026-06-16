@@ -271,19 +271,19 @@ function renderSnapshot(s: FinancialSnapshot): string {
 function buildSystem(provider: Provider, persona: { id?: string; name?: string }, snapshot: string): string {
   const personaName = persona?.name ?? "Personal Finance";
   const styleByProvider: Record<Provider, string> = {
-    lumo:   "Warm, balanced, concise.",
-    gpt:    "Highly structured, step-by-step reasoning.",
-    gemini: "Sharp, fast, compact.",
-    claude: "Deeply analytical, multi-angle.",
+    openai:     "Deeply analytical, multi-angle, premium reasoning.",
+    gemini:     "Warm, balanced, sharp and concise.",
+    groq:       "Fast, compact, high-signal.",
+    openrouter: "Highly structured, step-by-step reasoning.",
   };
-  return `You are Lumo AI — a premium AI financial coach inside FinTrack AI, routed through the "${PROVIDERS[provider].label}" engine.
+  return `You are Lumo AI — a premium AI financial coach inside FinTrack AI.
 
 Persona: ${personaName}.
 Voice: ${styleByProvider[provider]}
 
 ${snapshot}
 
-CRITICAL RULES — Phase 2 Personalization Engine:
+CRITICAL RULES — Personalization Engine:
 - You MUST ground every answer in the snapshot above. Quote real numbers (₹), real category names, real goal names, real budgets.
 - NEVER invent transactions, balances, goals, or categories that aren't in the snapshot.
 - If the user asks "how am I doing", "where am I overspending", "can I afford X" — compute the answer from the snapshot data (savings rate, budget usage, goal commitments, projected savings).
@@ -300,24 +300,7 @@ One-paragraph plain-English read of the situation, with at least one real ₹ nu
 ## Action Plan
 - Numbered list of 3 steps the user can do this week, with ₹ targets where possible.
 
-Style: use ₹ and Indian formatting (₹1,25,000). Keep under ~220 words. No emoji spam (max one tasteful emoji). Never name OpenAI/Google/Anthropic — you are Lumo AI. End with one short motivating line after the Action Plan.`;
-}
-
-async function callGateway(provider: Provider, messages: ChatMsg[], apiKey: string) {
-  const spec = PROVIDERS[provider];
-  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
-    body: JSON.stringify({ model: spec.model, messages, stream: false }),
-  });
-  if (!r.ok) {
-    const errText = await r.text();
-    const err: any = new Error(`gateway_${r.status}`);
-    err.status = r.status; err.detail = errText;
-    throw err;
-  }
-  const data = await r.json();
-  return { text: data?.choices?.[0]?.message?.content ?? "", usage: data?.usage };
+Style: use ₹ and Indian formatting (₹1,25,000). Keep under ~220 words. No emoji spam (max one tasteful emoji). Never name OpenAI/Google/Anthropic/Meta — you are Lumo AI. End with one short motivating line after the Action Plan.`;
 }
 
 Deno.serve(async (req) => {
