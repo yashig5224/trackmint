@@ -176,7 +176,7 @@ Deno.serve(async (req) => {
       title: reqBody.title,
       message: reqBody.body,
       link: reqBody.link ?? null,
-      delivered_via: "fcm",
+      metadata: { delivered_via: "fcm", data: reqBody.data ?? {} },
     });
 
     const sent = results.filter((r) => r.ok).length;
