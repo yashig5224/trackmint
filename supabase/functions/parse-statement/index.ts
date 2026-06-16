@@ -88,9 +88,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    const apiKey = Deno.env.get("GEMINI_API_KEY");
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: "Missing LOVABLE_API_KEY" }), {
+      return new Response(JSON.stringify({ error: "Statement parsing not configured (GEMINI_API_KEY missing)" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -102,60 +102,47 @@ Deno.serve(async (req) => {
       });
     }
 
-
     const mt = mimeType || "application/pdf";
-    const dataUrl = `data:${mt};base64,${fileBase64}`;
 
-    const body = {
-      model: "google/gemini-2.5-pro",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: `Parse this statement file: ${fileName}. Extract ALL transactions. Respond as JSON matching the schema.` },
-            { type: "file", file: { filename: fileName, file_data: dataUrl } },
-          ],
-        },
-      ],
-      tools: [{
-        type: "function",
-        function: {
-          name: "return_parsed_statement",
-          description: "Return the parsed statement transactions.",
-          parameters: RESPONSE_SCHEMA,
-        },
+    // Use Google Gemini's native API — supports inline PDF data + JSON-schema response.
+    const geminiBody = {
+      contents: [{
+        role: "user",
+        parts: [
+          { text: `${SYSTEM_PROMPT}\n\nParse this statement file: ${fileName}. Extract ALL transactions. Respond strictly as JSON matching the schema.` },
+          { inline_data: { mime_type: mt, data: fileBase64 } },
+        ],
       }],
-      tool_choice: { type: "function", function: { name: "return_parsed_statement" } },
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: RESPONSE_SCHEMA,
+        temperature: 0.1,
+      },
     };
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": apiKey,
+    const aiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(geminiBody),
       },
-      body: JSON.stringify(body),
-    });
+    );
 
     if (!aiRes.ok) {
       const errText = await aiRes.text();
-      const status = aiRes.status === 429 || aiRes.status === 402 ? aiRes.status : 500;
-      return new Response(JSON.stringify({ error: `AI gateway: ${aiRes.status} ${errText.slice(0, 300)}` }), {
+      const status = aiRes.status === 429 ? 429 : 500;
+      return new Response(JSON.stringify({ error: `AI provider: ${aiRes.status} ${errText.slice(0, 300)}` }), {
         status, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const aiJson = await aiRes.json();
-    const toolCall = aiJson?.choices?.[0]?.message?.tool_calls?.[0];
+    const content = aiJson?.candidates?.[0]?.content?.parts?.[0]?.text;
     let parsed: any = null;
-    if (toolCall?.function?.arguments) {
-      try { parsed = JSON.parse(toolCall.function.arguments); } catch { /* fall through */ }
-    }
-    if (!parsed) {
-      // fallback: try plain content
-      const content = aiJson?.choices?.[0]?.message?.content;
-      if (typeof content === "string") {
+    if (typeof content === "string") {
+      try { parsed = JSON.parse(content); }
+      catch {
         const m = content.match(/\{[\s\S]*\}/);
         if (m) { try { parsed = JSON.parse(m[0]); } catch { /* ignore */ } }
       }

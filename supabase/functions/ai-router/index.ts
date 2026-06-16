@@ -1,35 +1,19 @@
 // Multi-AI routing engine — secure server-side AI orchestration.
-// Routes to GPT / Gemini / Claude-class models via Lovable AI Gateway,
-// enforces plan-based access, smart-routes by intent, falls back on failure,
-// builds a real Financial Context snapshot from Supabase (Phase 2 AI Coach),
+// Routes to OpenAI / Gemini / Groq / OpenRouter using YOUR own API keys.
+// Enforces plan-based access, smart-routes by intent, falls back on failure,
+// builds a real Financial Context snapshot from Supabase,
 // persists conversations to ai_history, and logs every request to ai_usage_logs.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  PROVIDERS, allowedProviders, smartRoute, failoverChain, callProvider,
+  ProviderError, type Provider, type PlanTier, type ChatMsg,
+} from "../_shared/ai-providers.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-type Provider = "lumo" | "gpt" | "gemini" | "claude";
-type PlanTier = "free" | "pro" | "elite";
-
-interface ProviderSpec {
-  id: Provider;
-  label: string;
-  model: string;
-  minTier: PlanTier;
-  strength: "balanced" | "reasoning" | "speed" | "analysis";
-}
-
-const PROVIDERS: Record<Provider, ProviderSpec> = {
-  lumo:   { id: "lumo",   label: "Lumo Core",     model: "google/gemini-3-flash-preview", minTier: "free",  strength: "balanced"  },
-  gpt:    { id: "gpt",    label: "GPT-class",     model: "openai/gpt-5-mini",             minTier: "pro",   strength: "reasoning" },
-  gemini: { id: "gemini", label: "Gemini Pro",    model: "google/gemini-2.5-pro",         minTier: "pro",   strength: "speed"     },
-  claude: { id: "claude", label: "Claude Sonnet", model: "openai/gpt-5",                  minTier: "elite", strength: "analysis"  },
-};
-
-const tierRank: Record<PlanTier, number> = { free: 0, pro: 1, elite: 2 };
 
 async function resolveTier(sb: ReturnType<typeof createClient>, userId: string): Promise<PlanTier> {
   const { data } = await sb
@@ -47,25 +31,6 @@ async function resolveTier(sb: ReturnType<typeof createClient>, userId: string):
   if (k.startsWith("pro")) return "pro";
   return "free";
 }
-
-function smartRoute(message: string, tier: PlanTier): Provider {
-  const m = message.toLowerCase();
-  const wantsAnalysis = /(forecast|predict|analy[sz]e|deep|long.?term|simulat|wealth|portfolio|invest|risk|scenari)/.test(m);
-  const wantsReasoning = /(why|explain|compare|should i|plan|strategy|trade.?off|optim[iy]z)/.test(m);
-  const wantsSpeed = /(quick|fast|short|tldr|summar[iy]|brief|one.?liner)/.test(m);
-  if (wantsAnalysis && tier === "elite") return "claude";
-  if (wantsReasoning && tierRank[tier] >= 1) return "gpt";
-  if (wantsSpeed && tierRank[tier] >= 1) return "gemini";
-  return tier === "free" ? "lumo" : "gemini";
-}
-
-function allowedProviders(tier: PlanTier): Provider[] {
-  return (Object.values(PROVIDERS) as ProviderSpec[])
-    .filter((p) => tierRank[tier] >= tierRank[p.minTier])
-    .map((p) => p.id);
-}
-
-interface ChatMsg { role: "user" | "assistant" | "system"; content: string }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PHASE 2 — Financial Context Engine
@@ -306,19 +271,19 @@ function renderSnapshot(s: FinancialSnapshot): string {
 function buildSystem(provider: Provider, persona: { id?: string; name?: string }, snapshot: string): string {
   const personaName = persona?.name ?? "Personal Finance";
   const styleByProvider: Record<Provider, string> = {
-    lumo:   "Warm, balanced, concise.",
-    gpt:    "Highly structured, step-by-step reasoning.",
-    gemini: "Sharp, fast, compact.",
-    claude: "Deeply analytical, multi-angle.",
+    openai:     "Deeply analytical, multi-angle, premium reasoning.",
+    gemini:     "Warm, balanced, sharp and concise.",
+    groq:       "Fast, compact, high-signal.",
+    openrouter: "Highly structured, step-by-step reasoning.",
   };
-  return `You are Lumo AI — a premium AI financial coach inside FinTrack AI, routed through the "${PROVIDERS[provider].label}" engine.
+  return `You are Lumo AI — a premium AI financial coach inside FinTrack AI.
 
 Persona: ${personaName}.
 Voice: ${styleByProvider[provider]}
 
 ${snapshot}
 
-CRITICAL RULES — Phase 2 Personalization Engine:
+CRITICAL RULES — Personalization Engine:
 - You MUST ground every answer in the snapshot above. Quote real numbers (₹), real category names, real goal names, real budgets.
 - NEVER invent transactions, balances, goals, or categories that aren't in the snapshot.
 - If the user asks "how am I doing", "where am I overspending", "can I afford X" — compute the answer from the snapshot data (savings rate, budget usage, goal commitments, projected savings).
@@ -335,37 +300,13 @@ One-paragraph plain-English read of the situation, with at least one real ₹ nu
 ## Action Plan
 - Numbered list of 3 steps the user can do this week, with ₹ targets where possible.
 
-Style: use ₹ and Indian formatting (₹1,25,000). Keep under ~220 words. No emoji spam (max one tasteful emoji). Never name OpenAI/Google/Anthropic — you are Lumo AI. End with one short motivating line after the Action Plan.`;
-}
-
-async function callGateway(provider: Provider, messages: ChatMsg[], apiKey: string) {
-  const spec = PROVIDERS[provider];
-  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
-    body: JSON.stringify({ model: spec.model, messages, stream: false }),
-  });
-  if (!r.ok) {
-    const errText = await r.text();
-    const err: any = new Error(`gateway_${r.status}`);
-    err.status = r.status; err.detail = errText;
-    throw err;
-  }
-  const data = await r.json();
-  return { text: data?.choices?.[0]?.message?.content ?? "", usage: data?.usage };
+Style: use ₹ and Indian formatting (₹1,25,000). Keep under ~220 words. No emoji spam (max one tasteful emoji). Never name OpenAI/Google/Anthropic/Meta — you are Lumo AI. End with one short motivating line after the Action Plan.`;
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: "AI not configured" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!authHeader.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -387,8 +328,24 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { message, persona = {}, history = [], context, model: requestedModel = "auto" } =
-      await req.json();
+    const body = await req.json().catch(() => ({} as any));
+
+    // Admin health ping — returns which providers have keys configured.
+    if (body?.ping) {
+      const status = {
+        openai:     !!Deno.env.get("OPENAI_API_KEY"),
+        gemini:     !!Deno.env.get("GEMINI_API_KEY"),
+        groq:       !!Deno.env.get("GROQ_API_KEY"),
+        openrouter: !!Deno.env.get("OPENROUTER_API_KEY"),
+      };
+      const anyConfigured = Object.values(status).some(Boolean);
+      return new Response(JSON.stringify({ ok: anyConfigured, providers: status }), {
+        status: anyConfigured ? 200 : 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { message, persona = {}, history = [], context, model: requestedModel = "auto" } = body;
     if (!message || typeof message !== "string") {
       return new Response(JSON.stringify({ error: "message required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -409,7 +366,6 @@ Deno.serve(async (req) => {
         snapshotText = "USER FINANCIAL SNAPSHOT: (unavailable — proceed with general guidance).";
       }
     } else if (context && typeof context === "object") {
-      // Demo mode — use whatever the client passed.
       const lines = ["USER FINANCIAL SNAPSHOT (demo mode):"];
       if (context.monthlyIncome) lines.push(`- Monthly income: ₹${context.monthlyIncome}`);
       if (context.totalSpent)    lines.push(`- Spent this month: ₹${context.totalSpent}`);
@@ -427,12 +383,7 @@ Deno.serve(async (req) => {
       primary = allowed.includes(req) ? req : smartRoute(message, tier);
     } else primary = smartRoute(message, tier);
 
-    const fallbackOrder: Provider[] = [
-      primary,
-      ...(["gemini", "lumo", "gpt", "claude"] as Provider[]).filter(
-        (p) => p !== primary && allowed.includes(p),
-      ),
-    ];
+    const chain = failoverChain(primary, tier);
 
     const baseMessages: ChatMsg[] = [
       ...history.slice(-8).map((h: any) => ({
@@ -444,35 +395,32 @@ Deno.serve(async (req) => {
 
     const started = Date.now();
     let lastErr: any = null;
-    for (let i = 0; i < fallbackOrder.length; i++) {
-      const provider = fallbackOrder[i];
+    for (let i = 0; i < chain.length; i++) {
+      const provider = chain[i];
       const messages: ChatMsg[] = [
         { role: "system", content: buildSystem(provider, persona, snapshotText) },
         ...baseMessages,
       ];
       try {
-        const { text, usage } = await callGateway(provider, messages, apiKey);
+        const { text, usage } = await callProvider(provider, messages);
         const latency = Date.now() - started;
 
-        if (userId) {
-          // Log usage + persist conversation memory (best-effort, parallel).
-          await Promise.all([
-            sb.from("ai_usage_logs").insert({
-              user_id: userId, provider, model: PROVIDERS[provider].model,
-              requested_model: requestedModel,
-              prompt_tokens: usage?.prompt_tokens ?? null,
-              completion_tokens: usage?.completion_tokens ?? null,
-              total_tokens: usage?.total_tokens ?? null,
-              latency_ms: latency, status: "ok", fallback_used: i > 0,
-            }),
-            sb.from("ai_history").insert({
-              user_id: userId,
-              persona: persona?.id ?? null,
-              message,
-              ai_response: text,
-            }),
-          ]);
-        }
+        await Promise.all([
+          sb.from("ai_usage_logs").insert({
+            user_id: userId, provider, model: PROVIDERS[provider].model,
+            requested_model: requestedModel,
+            prompt_tokens: usage?.prompt_tokens ?? null,
+            completion_tokens: usage?.completion_tokens ?? null,
+            total_tokens: usage?.total_tokens ?? null,
+            latency_ms: latency, status: "ok", fallback_used: i > 0,
+          }),
+          sb.from("ai_history").insert({
+            user_id: userId,
+            persona: persona?.id ?? null,
+            message,
+            ai_response: text,
+          }),
+        ]);
 
         return new Response(JSON.stringify({
           text, provider, providerLabel: PROVIDERS[provider].label,
@@ -480,31 +428,32 @@ Deno.serve(async (req) => {
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       } catch (e: any) {
         lastErr = e;
-        console.error(`provider ${provider} failed`, e?.status, e?.detail);
-        if (e?.status === 429 || e?.status === 402) {
-          if (userId) {
-            await sb.from("ai_usage_logs").insert({
-              user_id: userId, provider, model: PROVIDERS[provider].model,
-              requested_model: requestedModel, status: "error",
-              latency_ms: Date.now() - started, error: `gateway_${e.status}`,
-            });
-          }
+        const status = e instanceof ProviderError ? e.status : 500;
+        const detail = e instanceof ProviderError ? e.detail : String(e?.message ?? e);
+        console.error(`provider ${provider} failed`, status, detail);
+        await sb.from("ai_usage_logs").insert({
+          user_id: userId, provider, model: PROVIDERS[provider].model,
+          requested_model: requestedModel, status: "error",
+          latency_ms: Date.now() - started, error: `${status}:${detail.slice(0, 200)}`,
+          fallback_used: i > 0,
+        });
+        // Hard fail on rate-limit / payment — don't cascade to other paid providers
+        if (status === 429 || status === 402) {
           return new Response(JSON.stringify({
-            error: e.status === 429 ? "Rate limit — slow down a sec." : "AI credits exhausted.",
-          }), { status: e.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+            error: status === 429
+              ? "Rate limit on AI provider — slow down a sec."
+              : "AI provider credits exhausted. Top up your provider account.",
+          }), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
+        // Otherwise continue to next provider in chain
       }
     }
 
-    if (userId) {
-      await sb.from("ai_usage_logs").insert({
-        user_id: userId, provider: primary, model: PROVIDERS[primary].model,
-        requested_model: requestedModel, status: "error",
-        latency_ms: Date.now() - started, error: String(lastErr?.message ?? "all_failed"),
-      });
-    }
-    return new Response(JSON.stringify({ error: "AI temporarily unavailable" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return new Response(JSON.stringify({
+      error: "AI temporarily unavailable — all providers failed",
+      detail: lastErr instanceof ProviderError ? lastErr.detail : String(lastErr?.message ?? "unknown"),
+    }), {
+      status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("ai-router fatal", e);
