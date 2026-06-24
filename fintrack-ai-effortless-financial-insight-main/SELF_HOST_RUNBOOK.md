@@ -148,7 +148,7 @@ Replace Lovable OAuth wrapper in code:
 
 ```diff
 - import { lovable } from "@/integrations/lovable";
-- await lovable.auth.signInWithOAuth("google", { redirect_uri: ... });
+- await supabase.auth.signInWithOAuth("google", { redirect_uri: ... });
 + await supabase.auth.signInWithOAuth({
 +   provider: "google",
 +   options: { redirectTo: `${window.location.origin}/app` },

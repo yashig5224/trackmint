@@ -235,7 +235,7 @@ const Login = () => {
 
   const handleGoogle = async () => {
     setSubmitting(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
+    const result = await supabase.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin + "/app",
     });
     if (result.error) {
