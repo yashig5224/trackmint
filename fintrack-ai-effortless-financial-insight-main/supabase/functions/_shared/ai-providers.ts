@@ -132,7 +132,7 @@ async function callOpenRouter(messages: ChatMsg[]): Promise<CallResult> {
       "Content-Type": "application/json",
       Authorization: `Bearer ${key}`,
       "HTTP-Referer": "https://finbee.lovable.app",
-      "X-Title": "FinTrack AI",
+      "X-Title": "TrackMint",
     },
     body: JSON.stringify({ model: PROVIDERS.openrouter.model, messages, stream: false }),
   });

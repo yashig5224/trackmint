@@ -1,6 +1,6 @@
-# FinTrack AI — Self-Host Runbook
+# TrackMint — Self-Host Runbook
 
-This document is the manual ops process for moving FinTrack AI off Lovable Cloud and onto your own infrastructure. It cannot be executed from inside the Lovable editor — these steps require shell access, your own Supabase project, and your own deployment target (Vercel/Netlify/Cloudflare Pages/etc.).
+This document is the manual ops process for moving TrackMint off Lovable Cloud and onto your own infrastructure. It cannot be executed from inside the Lovable editor — these steps require shell access, your own Supabase project, and your own deployment target (Vercel/Netlify/Cloudflare Pages/etc.).
 
 ---
 
@@ -166,7 +166,7 @@ Resend Dashboard → Domains → add your domain → add SPF/DKIM DNS records �
 Edit `supabase/functions/send-email/index.ts`:
 
 ```ts
-const FROM_DEFAULT = "FinTrack AI <hello@yourdomain.com>";
+const FROM_DEFAULT = "TrackMint <hello@yourdomain.com>";
 ```
 
 Redeploy: `supabase functions deploy send-email`.

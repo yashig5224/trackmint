@@ -49,7 +49,7 @@ export async function openRazorpayCheckout(opts: OpenCheckoutOptions) {
       amount: order.amount,
       currency: order.currency,
       order_id: order.orderId,
-      name: "FinTrack AI",
+      name: "TrackMint",
       description: `${order.planName} (${order.cycle})`,
       image: "https://finbee.lovable.app/favicon.ico",
       prefill: { email: opts.userEmail, name: opts.userName },

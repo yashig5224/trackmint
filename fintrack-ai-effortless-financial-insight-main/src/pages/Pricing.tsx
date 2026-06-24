@@ -106,8 +106,8 @@ export default function Pricing() {
   return (
     <div className="min-h-screen bg-[#fafafa] text-slate-900 relative">
       <SEO
-        title="Pricing — FinTrack AI Free, Pro & Elite plans"
-        description="Compare FinTrack AI plans: Free, Pro AI (₹299/mo) and Elite AI+ (₹799/mo). AI budget planner, multi-model coach, automation, forecasting, and bank sync."
+        title="Pricing — TrackMint Free, Pro & Elite plans"
+        description="Compare TrackMint plans: Free, Pro AI (₹299/mo) and Elite AI+ (₹799/mo). AI budget planner, multi-model coach, automation, forecasting, and bank sync."
         path="/pricing"
         jsonLd={[
           {
@@ -122,9 +122,9 @@ export default function Pricing() {
           {
             "@context": "https://schema.org",
             "@type": "Product",
-            name: "FinTrack AI",
+            name: "TrackMint",
             description: "AI-powered personal finance with automated tracking, goals, budgets and a multi-model AI financial coach.",
-            brand: { "@type": "Brand", name: "FinTrack AI" },
+            brand: { "@type": "Brand", name: "TrackMint" },
             offers: PLANS.filter((p) => p.priceMonthly > 0).map((p) => ({
               "@type": "Offer",
               name: p.name,
@@ -255,7 +255,7 @@ export default function Pricing() {
       <section className="px-6 pb-24">
         <div className="max-w-6xl mx-auto rounded-3xl bg-gradient-to-br from-white via-indigo-50/40 to-violet-50/40 border border-slate-200/60 p-10 md:p-14 shadow-xl shadow-slate-900/5">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">How much you save with FinTrack AI</h2>
+            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">How much you save with TrackMint</h2>
             <p className="text-slate-500 mt-3 max-w-xl mx-auto">Real numbers from real users. AI coaching pays for itself in the first month.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6 md:gap-10">

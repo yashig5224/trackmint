@@ -63,7 +63,7 @@ const DashboardPreview = () => {
             </span>.
           </h2>
           <p className="mt-5 text-foreground/65 leading-relaxed max-w-md">
-            Every account, goal, and insight in one luminous workspace. FinTrack AI
+            Every account, goal, and insight in one luminous workspace. TrackMint
             turns scattered statements into clarity you can act on.
           </p>
 

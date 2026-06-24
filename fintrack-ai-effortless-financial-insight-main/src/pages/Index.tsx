@@ -17,21 +17,21 @@ const Index = () => {
   return (
     <div className="relative min-h-screen bg-white text-foreground overflow-x-hidden">
       <SEO
-        title="FinTrack AI — AI budget planner & financial coach"
+        title="TrackMint — AI budget planner & financial coach"
         description="An AI budget planner and 24/7 financial coach. Automate tracking, set goals, and get personalized money advice across GPT, Gemini, and Claude."
         path="/"
         jsonLd={[
           {
             "@context": "https://schema.org",
             "@type": "Organization",
-            name: "FinTrack AI",
+            name: "TrackMint",
             url: "https://finbee.lovable.app",
             logo: "https://finbee.lovable.app/icons/icon-512.png",
           },
           {
             "@context": "https://schema.org",
             "@type": "WebSite",
-            name: "FinTrack AI",
+            name: "TrackMint",
             url: "https://finbee.lovable.app",
             potentialAction: {
               "@type": "SearchAction",

@@ -169,7 +169,7 @@ const UserApp = () => {
       <aside className="hidden lg:flex w-64 flex-col border-r border-gray-100 bg-white/60 backdrop-blur-xl p-6 fixed inset-y-0 left-0">
         <Link to="/" className="flex items-center gap-2 mb-10">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-gray-900 to-gray-700 flex items-center justify-center"><Sparkles className="w-4 h-4 text-white" /></div>
-          <span className="font-display text-lg font-bold">FinTrack AI</span>
+          <span className="font-display text-lg font-bold">TrackMint</span>
         </Link>
         <nav className="space-y-1 flex-1">
           {([

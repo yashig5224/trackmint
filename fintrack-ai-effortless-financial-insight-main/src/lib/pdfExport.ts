@@ -1,4 +1,4 @@
-// FinTrack AI — Premium Investor-Grade Report Engine (v3)
+// TrackMint — Premium Investor-Grade Report Engine (v3)
 // Every figure derived from real Supabase data. No placeholders.
 // 11 themed pages with branded gradient layout, modern charts,
 // AI executive analysis, deep intelligence sections and a 90-day action plan.
@@ -166,7 +166,7 @@ function brandedHeader(d: Doc, title: string, subtitle: string, tier: string) {
   d.setTextColor(...PAPER);
   d.setFontSize(13);
   d.setFont("helvetica", "bold");
-  d.text("FinTrack AI", 52, 27);
+  d.text("TrackMint", 52, 27);
   d.setFontSize(7.5);
   d.setFont("helvetica", "normal");
   d.text("Personal Financial Operating System", 52, 36);
@@ -209,7 +209,7 @@ function pageFooter(d: Doc) {
     d.setFontSize(8.5);
     d.setFont("helvetica", "normal");
     d.setTextColor(...MUTED);
-    d.text("FinTrack AI · Confidential financial intelligence", 20, H(d) - 14);
+    d.text("TrackMint · Confidential financial intelligence", 20, H(d) - 14);
     d.text(`Page ${i} of ${total}`, W(d) - 20, H(d) - 14, { align: "right" });
     // tiny brand dot
     d.setFillColor(...PRIMARY);
@@ -746,7 +746,7 @@ function pageCover(doc: Doc, input: ReportInput, score: number, grade: string) {
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
   resetText(doc);
-  doc.text("FinTrack AI", 84, 78);
+  doc.text("TrackMint", 84, 78);
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   resetText(doc);

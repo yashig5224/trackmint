@@ -91,7 +91,7 @@ export default function Billing() {
               <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-indigo-600 to-fuchsia-600 flex items-center justify-center mb-4 shadow-lg">
                 <CheckCircle2 className="w-8 h-8 text-white" />
               </div>
-              <p className="text-center text-lg font-semibold text-slate-900">FinTrack AI {planName} Activated ✨</p>
+              <p className="text-center text-lg font-semibold text-slate-900">TrackMint {planName} Activated ✨</p>
               <p className="text-center text-sm text-slate-500 mt-1">All premium features unlocked.</p>
             </motion.div>
           </motion.div>

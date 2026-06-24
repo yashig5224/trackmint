@@ -1,5 +1,5 @@
 // AI Financial Operations Center
-// FinTrack AI auto-monitors and optimizes the user's finances.
+// TrackMint auto-monitors and optimizes the user's finances.
 // All modules are derived from real Supabase data — no IF/THEN builder.
 
 import { useCallback, useEffect, useMemo, useState } from "react";

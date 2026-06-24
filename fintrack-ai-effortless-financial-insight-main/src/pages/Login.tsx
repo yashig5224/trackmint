@@ -276,8 +276,8 @@ const Login = () => {
   return (
     <div className="min-h-screen relative bg-[#fafafa] flex">
       <SEO
-        title="Sign in to FinTrack AI — your AI budget planner"
-        description="Sign in or create your FinTrack AI account to access your AI budget planner, financial coach, and personalized money insights."
+        title="Sign in to TrackMint — your AI budget planner"
+        description="Sign in or create your TrackMint account to access your AI budget planner, financial coach, and personalized money insights."
         path="/login"
       />
       <Backdrop />
@@ -290,7 +290,7 @@ const Login = () => {
             <Sparkles className="w-4.5 h-4.5 text-white" strokeWidth={2} />
           </div>
           <span className="font-display text-xl font-semibold tracking-tight text-slate-900">
-            FinTrack AI
+            TrackMint
           </span>
         </Link>
 
@@ -336,7 +336,7 @@ const Login = () => {
         </div>
 
         <div className="relative text-xs text-slate-400 flex items-center gap-4">
-          <span>© FinTrack AI</span>
+          <span>© TrackMint</span>
           <span className="w-1 h-1 rounded-full bg-slate-300" />
           <Link to="/" className="hover:text-slate-700 transition-colors">
             Back to site
@@ -354,7 +354,7 @@ const Login = () => {
             <Sparkles className="w-4 h-4 text-white" />
           </div>
           <span className="font-display text-lg font-semibold tracking-tight">
-            FinTrack AI
+            TrackMint
           </span>
         </Link>
 

@@ -340,7 +340,7 @@ const Admin = () => {
             </div>
             <div>
               <div className="text-sm font-semibold leading-tight">Founder Admin</div>
-              <div className="text-[11px] text-slate-500 leading-tight">FinTrack AI — internal only</div>
+              <div className="text-[11px] text-slate-500 leading-tight">TrackMint — internal only</div>
             </div>
           </div>
           <div className="flex items-center gap-2">

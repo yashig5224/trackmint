@@ -59,7 +59,7 @@ const Navbar = () => {
                   className="relative w-8 h-8 rounded-full bg-gradient-to-br from-[hsl(190,90%,85%)] via-[hsl(260,80%,88%)] to-[hsl(150,70%,82%)] p-[2px] shadow-[0_4px_16px_-4px_rgba(140,140,220,0.4)]"
                 >
                   <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                    <img src={lumoAvatar} alt="FinTrack AI Lumo financial assistant" className="w-7 h-7 object-cover" />
+                    <img src={lumoAvatar} alt="TrackMint Lumo financial assistant" className="w-7 h-7 object-cover" />
                   </div>
                   <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[hsl(150,80%,55%)] animate-pulse" />
                 </motion.div>
@@ -139,8 +139,8 @@ const Navbar = () => {
             >
               <div className="flex items-center justify-between p-5 border-b border-slate-100">
                 <div className="flex items-center gap-2">
-                  <img src={lumoAvatar} alt="FinTrack AI Lumo financial assistant" className="w-8 h-8 rounded-full" />
-                  <span className="font-display font-bold">FinTrack AI</span>
+                  <img src={lumoAvatar} alt="TrackMint Lumo financial assistant" className="w-8 h-8 rounded-full" />
+                  <span className="font-display font-bold">TrackMint</span>
                 </div>
                 <button onClick={() => setOpen(false)} className="p-2 rounded-full hover:bg-slate-100">
                   <X className="w-4 h-4" />

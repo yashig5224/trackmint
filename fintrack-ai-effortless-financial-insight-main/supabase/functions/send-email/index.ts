@@ -9,7 +9,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const FROM_DEFAULT = "FinTrack AI <onboarding@resend.dev>";
+const FROM_DEFAULT = "TrackMint <onboarding@resend.dev>";
 
 type TemplateName =
   | "welcome"
@@ -33,19 +33,19 @@ function renderTemplate(name: TemplateName, data: Record<string, any> = {}): { s
   const safe = (v: unknown) => String(v ?? "").replace(/[<>&"]/g, (c) =>
     ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]!));
   const brand = `<div style="font-family:-apple-system,Inter,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;color:#1a1a1a;background:#fafafa;border-radius:16px">`;
-  const sign  = `<p style="margin-top:32px;font-size:13px;color:#888">— The FinTrack AI Team</p></div>`;
+  const sign  = `<p style="margin-top:32px;font-size:13px;color:#888">— The TrackMint Team</p></div>`;
 
   switch (name) {
     case "welcome":
       return {
-        subject: `Welcome to FinTrack AI, ${safe(data.name) || "there"}!`,
+        subject: `Welcome to TrackMint, ${safe(data.name) || "there"}!`,
         html: `${brand}<h1 style="font-size:24px;margin:0 0 12px">Welcome aboard 🎉</h1>
-<p>Hi ${safe(data.name) || "there"}, your FinTrack AI account is ready. Connect your first bank statement or add a transaction to unlock Lumo, your AI financial coach.</p>
-<p><a href="${safe(data.appUrl) || "https://finbee.lovable.app"}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#6366f1;color:#fff;border-radius:10px;text-decoration:none;font-weight:600">Open FinTrack AI</a></p>${sign}`,
+<p>Hi ${safe(data.name) || "there"}, your TrackMint account is ready. Connect your first bank statement or add a transaction to unlock Lumo, your AI financial coach.</p>
+<p><a href="${safe(data.appUrl) || "https://finbee.lovable.app"}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#6366f1;color:#fff;border-radius:10px;text-decoration:none;font-weight:600">Open TrackMint</a></p>${sign}`,
       };
     case "verification":
       return {
-        subject: "Verify your FinTrack AI email",
+        subject: "Verify your TrackMint email",
         html: `${brand}<h1 style="font-size:22px">Confirm your email</h1>
 <p>Tap the button below to verify your address and finish setting up your account.</p>
 <p><a href="${safe(data.verifyUrl)}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#6366f1;color:#fff;border-radius:10px;text-decoration:none;font-weight:600">Verify email</a></p>${sign}`,
@@ -65,7 +65,7 @@ function renderTemplate(name: TemplateName, data: Record<string, any> = {}): { s
       };
     case "subscription-cancelled":
       return {
-        subject: "Your FinTrack AI subscription was cancelled",
+        subject: "Your TrackMint subscription was cancelled",
         html: `${brand}<h1 style="font-size:22px">Subscription cancelled</h1>
 <p>You'll keep premium access until <strong>${safe(data.endsAt)}</strong>. After that you'll move to the Free plan automatically.</p>${sign}`,
       };

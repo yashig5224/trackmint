@@ -20,7 +20,7 @@ try {
   messaging.onBackgroundMessage((payload) => {
     const { title, body } = payload.notification || {};
     const link = payload.data?.link || "/";
-    self.registration.showNotification(title || "FinTrack AI", {
+    self.registration.showNotification(title || "TrackMint", {
       body: body || "",
       icon: "/icon-192.png",
       badge: "/icon-192.png",

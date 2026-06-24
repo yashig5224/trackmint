@@ -1,12 +1,12 @@
-# FinTrack AI
+# TrackMint
 
 > AI-powered personal finance: automated tracking, gamified goals, and a 24/7 financial coach for India and global users.
 
-FinTrack AI combines an AI budget planner, automated transaction categorization, goal tracking, and a multi-model AI financial coach (Lumo, GPT, Gemini, Claude) into one premium fintech app. Users can connect bank accounts, import statements, build budgets and goals, and chat with a personalized financial coach.
+TrackMint combines an AI budget planner, automated transaction categorization, goal tracking, and a multi-model AI financial coach (Lumo, GPT, Gemini, Claude) into one premium fintech app. Users can connect bank accounts, import statements, build budgets and goals, and chat with a personalized financial coach.
 
 ## Pages
 
-- [Home](/): Product overview, features, and how FinTrack AI works.
+- [Home](/): Product overview, features, and how TrackMint works.
 - [Pricing](/pricing): Free, Pro AI, and Elite AI+ plans with feature comparison and FAQ.
 - [AI Coach](/coach): Try the AI financial coach in demo mode — persona selection and chat.
 
