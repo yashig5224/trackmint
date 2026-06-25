@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
-
+import AuthCallback from "./pages/AuthCallback";
 import Coach from "./pages/Coach";
 import Login from "./pages/Login";
 import UserApp from "./pages/UserApp";
