@@ -239,12 +239,11 @@ const Login = () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/app`,
+        redirectTo: window.location.origin,
       },
     });
 
     if (error) {
-      console.error(error);
       toast.error(error.message);
     }
   };
