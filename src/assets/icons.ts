@@ -14,8 +14,8 @@ import navTransactions from "./nav/transactions.png";
 import navGoals from "./nav/goals.png";
 import navReports from "./nav/reports.png";
 import navSettings from "./nav/settings.png";
-import navautomation from "@assets/icons/nav/automation.png";
-import navcoach from "@assets/icons/nav/aicoach.png";
+import navautomation from "./nav/automation.png";
+import navaicoach from "./nav/aicoach.png";
 
 export const CATEGORY_ICONS: Record<string, string> = {
   Food: food,
@@ -42,5 +42,5 @@ export const NAV_ICONS = {
   reports: navReports,
   settings: navSettings,
   automation: navautomation,
-  aicoach: navcoach,
+  aicoach: navaicoach,
 };
