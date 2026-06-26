@@ -53,7 +53,9 @@ const sidebarItems = [
   { img: NAV_ICONS.transactions, label: "Transactions", id: "transactions" },
   { img: NAV_ICONS.goals, label: "Goals", id: "goals" },
   { img: NAV_ICONS.reports, label: "Reports", id: "reports" },
-  { img: null, icon: MessageSquare, label: "AI Coach", id: "chat" },
+  { img: NAV_ICONS.settings, label: "Settings", id: "settings" },
+   { img: NAV_ICONS.automation, label: "Automation", id: "automation" },
+  { img: NAV_ICONS.aicoach, label: "AI Coach", id: "chat" },
 ];
 
 const Dashboard = () => {
