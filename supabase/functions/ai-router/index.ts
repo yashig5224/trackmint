@@ -318,16 +318,29 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } },
     );
+const token = authHeader.replace("Bearer ", "");
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsErr } = await sb.auth.getClaims(token);
-    const userId = (claimsData?.claims?.sub as string) ?? null;
-    if (claimsErr || !userId) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+const {
+  data: { user },
+  error: authError,
+} = await sb.auth.getUser(token);
+
+if (authError || !user) {
+  console.error("Auth error:", authError);
+
+  return new Response(
+    JSON.stringify({ error: "Unauthorized" }),
+    {
+      status: 401,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
     }
+  );
+}
 
+const userId = user.id;
     const body = await req.json().catch(() => ({} as any));
 
     // Admin health ping — returns which providers have keys configured.
