@@ -222,11 +222,13 @@ const LumoVoiceMode = ({ open, onClose, tier, persona, selectedModel, onTranscri
   const [level, setLevel] = useState(0.22);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [voiceReplies, setVoiceReplies] = useState(true);
+  const [liveSpeechText, setLiveSpeechText] = useState("");
   const [continuousMode, setContinuousMode] = useState(false);
   const [selectedVoiceName, setSelectedVoiceName] = useState<string | undefined>();
   const [speechRate, setSpeechRate] = useState(1);
   const [voicesReady, setVoicesReady] = useState(false);
   const [avatarBroken, setAvatarBroken] = useState(false);
+  const [speakingText, setSpeakingText] = useState("");
   const [routerMeta, setRouterMeta] = useState({
     provider: selectedModel === "auto" ? "lumo" : selectedModel,
     providerLabel: modelLabels[selectedModel] || "Lumo Router",
@@ -388,6 +390,7 @@ const LumoVoiceMode = ({ open, onClose, tier, persona, selectedModel, onTranscri
     }
 
     const clean = stripMarkdown(text).slice(0, 850);
+    setLiveSpeechText(clean);
     if (!clean) {
       setVoiceState("idle");
       scheduleContinuousListen();
@@ -411,6 +414,7 @@ const LumoVoiceMode = ({ open, onClose, tier, persona, selectedModel, onTranscri
       utterance.onend = () => {
         if (speechGenerationRef.current !== generation) return;
         setVoiceState("idle");
+        setLiveSpeechText("");
         scheduleContinuousListen();
       };
       utterance.onerror = () => {
@@ -649,6 +653,7 @@ const LumoVoiceMode = ({ open, onClose, tier, persona, selectedModel, onTranscri
     }
     if (voiceState === "speaking") {
       stopSpeech();
+      setLiveSpeechText("");
       setVoiceState("idle");
       scheduleContinuousListen();
       return;
@@ -937,7 +942,21 @@ const LumoVoiceMode = ({ open, onClose, tier, persona, selectedModel, onTranscri
                     </div>
                   </motion.button>
 
-                  <div className="mt-1 flex h-20 items-center justify-center gap-1.5 sm:h-24">
+                  {voiceState === "speaking" && liveSpeechText && (
+                    <motion.div
+                      initial={{ opacity: 0, x: 20, scale: 0.95 }}
+                      animate={{ opacity: 1, x: 0, scale: 1 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      className="absolute right-[-340px] top-1/2 -translate-y-1/2 w-80 rounded-3xl border border-border/60 bg-background/95 p-4 shadow-2xl backdrop-blur-xl"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <Volume2 className="h-4 w-4 text-[hsl(238_82%_58%)] animate-pulse" />
+                        <span className="text-xs font-semibold text-muted-foreground">Lumo is speaking</span>
+                      </div>
+                      <p className="text-sm leading-6 text-foreground">{liveSpeechText}</p>
+                    </motion.div>
+                  )}
+<div className="mt-1 flex h-20 items-center justify-center gap-1.5 sm:h-24">
                     {bars.map((bar) => {
                       const phase = (bar / bars.length) * Math.PI * 2;
                       const height = voiceState === "idle"

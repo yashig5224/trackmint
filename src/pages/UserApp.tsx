@@ -77,7 +77,7 @@ const UserApp = () => {
   const user = demo.isDemo ? ({ id: "demo-user", email: "demo@TrackMint.ai" } as any) : auth.user;
   const profile = demo.isDemo ? (DEMO_PROFILE as any) : auth.profile;
   const signOut = demo.isDemo ? async () => { navigate("/"); } : auth.signOut;
-  const refreshProfile = demo.isDemo ? async () => {} : auth.refreshProfile;
+  const refreshProfile = demo.isDemo ? async () => { } : auth.refreshProfile;
   const [tab, setTab] = useState<Tab>("overview");
   const [transactions, setTransactions] = useState<Tx[]>(demo.isDemo ? (DEMO_TRANSACTIONS as unknown as Tx[]) : []);
   const [goals, setGoals] = useState<Goal[]>(demo.isDemo ? (DEMO_GOALS as unknown as Goal[]) : []);
@@ -168,89 +168,97 @@ const UserApp = () => {
       {/* Sidebar — desktop */}
       <aside className="hidden lg:flex w-64 flex-col border-r border-gray-100 bg-white/60 backdrop-blur-xl p-6 fixed inset-y-0 left-0">
 
-  <Link
-  to="/"
-  className="flex items-center justify-center mb-10 transition-transform duration-300 hover:scale-105"
->
-  <img
-    src={TrackMintLogo}
-    alt="TrackMint"
-    className="h-12 w-auto object-contain"
-  />
-</Link>
-  <nav className="space-y-1 flex-1">
+        <Link
+          to="/"
+          className="flex items-center gap-3 mb-10 px-3 py-2 rounded-2xl hover:bg-slate-100 transition-all duration-300"
+        >
+          <img
+            src={TrackMintLogo}
+            alt="TrackMint"
+            className="h-11 w-11 rounded-xl object-cover shadow-md"
+          />
 
-    {[
-      { id: "overview", label: "Overview", img: NAV_ICONS.overview },
-      { id: "transactions", label: "Transactions", img: NAV_ICONS.transactions },
-      { id: "goals", label: "Goals", img: NAV_ICONS.goals },
-      { id: "reports", label: "Reports", img: NAV_ICONS.reports },
-      { id: "automation", label: "Automation", img: NAV_ICONS.automation },
-      { id: "settings", label: "Settings", img: NAV_ICONS.settings },
-    ].map(({ id, label, img }) => (
+          <div className="leading-tight">
+            <h1 className="text-xl font-bold text-slate-900">
+              TrackMint
+            </h1>
+            <p className="text-xs text-slate-500">
+              AI Finance Platform
+            </p>
+          </div>
+        </Link>
+        <nav className="space-y-1 flex-1">
 
-      <button
-        key={id}
-        onClick={() => setTab(id as Tab)}
-        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-medium transition-all relative ${
-          tab === id
-            ? "bg-gradient-to-r from-purple-100 via-blue-50 to-cyan-50 text-gray-900 shadow-sm"
-            : "text-gray-600 hover:bg-gray-50"
-        }`}
-      >
+          {[
+            { id: "overview", label: "Overview", img: NAV_ICONS.overview },
+            { id: "transactions", label: "Transactions", img: NAV_ICONS.transactions },
+            { id: "goals", label: "Goals", img: NAV_ICONS.goals },
+            { id: "reports", label: "Reports", img: NAV_ICONS.reports },
+            { id: "automation", label: "Automation", img: NAV_ICONS.automation },
+            { id: "settings", label: "Settings", img: NAV_ICONS.settings },
+          ].map(({ id, label, img }) => (
 
-        <img
-          src={img}
-          className="w-9 h-9 object-contain shrink-0"
-        />
+            <button
+              key={id}
+              onClick={() => setTab(id as Tab)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-medium transition-all relative ${tab === id
+                ? "bg-gradient-to-r from-purple-100 via-blue-50 to-cyan-50 text-gray-900 shadow-sm"
+                : "text-gray-600 hover:bg-gray-50"
+                }`}
+            >
 
-        <span>{label}</span>
+              <img
+                src={img}
+                className="w-9 h-9 object-contain shrink-0"
+              />
 
-        {tab === id && (
-          <span className="absolute right-3 w-1.5 h-1.5 rounded-full bg-cyan-500" />
-        )}
+              <span>{label}</span>
 
-      </button>
+              {tab === id && (
+                <span className="absolute right-3 w-1.5 h-1.5 rounded-full bg-cyan-500" />
+              )}
 
-    ))}
+            </button>
 
-    {/* AI COACH */}
+          ))}
 
-    <Link
-      to="/coach"
-      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl mt-4 border border-purple-200 bg-gradient-to-r from-violet-50 to-cyan-50 hover:shadow-md transition-all"
-    >
+          {/* AI COACH */}
 
-      <img
-        src={NAV_ICONS.aicoach}
-        className="w-9 h-9 object-contain"
-      />
+          <Link
+            to="/coach"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl mt-4 border border-purple-200 bg-gradient-to-r from-violet-50 to-cyan-50 hover:shadow-md transition-all"
+          >
 
-      <div className="flex flex-col items-start">
+            <img
+              src={NAV_ICONS.aicoach}
+              className="w-9 h-9 object-contain"
+            />
 
-        <span className="font-semibold text-gray-900">
-          Lumo AI Coach
-        </span>
+            <div className="flex flex-col items-start">
 
-        <span className="text-xs text-gray-500">
-          Personal Finance AI
-        </span>
+              <span className="font-semibold text-gray-900">
+                Lumo AI Coach
+              </span>
 
-      </div>
+              <span className="text-xs text-gray-500">
+                Personal Finance AI
+              </span>
 
-    </Link>
+            </div>
 
-  </nav>
+          </Link>
 
-  <button
-    onClick={handleSignOut}
-    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-500 hover:bg-gray-100"
-  >
-    <LogOut className="w-4 h-4" />
-    Sign Out
-  </button>
+        </nav>
 
-</aside>
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-500 hover:bg-gray-100"
+        >
+          <LogOut className="w-4 h-4" />
+          Sign Out
+        </button>
+
+      </aside>
 
       <main className="flex-1 lg:ml-64 pb-24 lg:pb-12">
         {/* Top header */}
@@ -273,11 +281,10 @@ const UserApp = () => {
               <button
                 onClick={() => setTab("settings")}
                 aria-label="Settings"
-                className={`lg:hidden w-9 h-9 rounded-full flex items-center justify-center border transition-colors ${
-                  tab === "settings"
-                    ? "bg-gray-900 text-white border-gray-900"
-                    : "bg-white text-gray-600 border-gray-100"
-                }`}
+                className={`lg:hidden w-9 h-9 rounded-full flex items-center justify-center border transition-colors ${tab === "settings"
+                  ? "bg-gray-900 text-white border-gray-900"
+                  : "bg-white text-gray-600 border-gray-100"
+                  }`}
               >
                 <Settings className="w-4 h-4" />
               </button>
@@ -457,20 +464,18 @@ const UserApp = () => {
           const inner = (
             <>
               <div
-                className={`flex items-center justify-center transition-all ${
-                  isCoach
-                    ? "w-10 h-10 -mt-3 rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 text-white shadow-lg shadow-indigo-500/40"
-                    : active
+                className={`flex items-center justify-center transition-all ${isCoach
+                  ? "w-10 h-10 -mt-3 rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 text-white shadow-lg shadow-indigo-500/40"
+                  : active
                     ? "text-gray-900"
                     : "text-gray-400"
-                }`}
+                  }`}
               >
                 <Icon className={isCoach ? "w-5 h-5" : "w-5 h-5"} strokeWidth={active ? 2.4 : 1.8} />
               </div>
               <span
-                className={`text-[10px] font-semibold mt-0.5 ${
-                  active ? "text-gray-900" : isCoach ? "text-violet-600" : "text-gray-400"
-                }`}
+                className={`text-[10px] font-semibold mt-0.5 ${active ? "text-gray-900" : isCoach ? "text-violet-600" : "text-gray-400"
+                  }`}
               >
                 {item.label}
               </span>
