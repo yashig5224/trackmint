@@ -186,14 +186,10 @@ overflow-y-auto
                   }}
 
                   animate={{
-                    opacity: isOther ? 0.25 : 1,
-                    y: isSelected ? -25 : isOther ? 20 : 0,
+                    opacity: isOther ? 0.4 : 1,
                     scale: isSelected ? 1.15 : 1,
-                    rotateY: isHovered && !isSelected ? -4 : 0,
-                    rotateX: isHovered && !isSelected ? 2 : 0,
-                    zIndex: isSelected ? 50 : 1,
+                    y: isSelected ? -20 : 0,
                   }}
-
                   transition={{
                     delay: selectedId ? 0 : 0.05 + i * 0.05,
                     duration: selectedId ? 0.7 : 0.5,
