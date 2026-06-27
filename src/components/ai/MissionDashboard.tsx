@@ -621,48 +621,6 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
           })}
         </div>
 
-        {/* ── Premium Powers (plan-gated previews) ─────────────────────── */}
-        <div className="px-3 pt-3 pb-1 border-t border-slate-100/70">
-          <div className="flex items-center justify-between mb-2 px-1">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400 font-bold">Premium Powers</p>
-            {!isElite && (
-              <button
-                onClick={() => openUpgrade(isPro ? "elite" : "pro")}
-                className="text-[10px] font-bold uppercase tracking-wider bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent hover:opacity-80"
-              >
-                Unlock
-              </button>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-1.5">
-            {LOCKED_FEATURES.map((f) => {
-              const locked = tierRank[tier] < tierRank[f.minTier];
-              const Icon = f.icon;
-              return (
-                <button
-                  key={f.id}
-                  onClick={() => locked ? openUpgrade(f.minTier === "elite" ? "elite" : "pro", f.label) : toast(`${f.label} ready`)}
-                  className={`group relative overflow-hidden text-left p-2.5 rounded-xl border transition-all ${
-                    locked
-                      ? "bg-gradient-to-br from-white to-slate-50 border-slate-200/70 hover:border-indigo-300 hover:shadow-md"
-                      : "bg-gradient-to-br from-emerald-50 to-white border-emerald-200/70"
-                  }`}
-                  title={f.desc}
-                >
-                  {locked && (
-                    <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-white shadow-sm flex items-center justify-center">
-                      <Lock className="w-2.5 h-2.5 text-amber-500" />
-                    </div>
-                  )}
-                  <Icon className={`w-3.5 h-3.5 mb-1 ${locked ? "text-indigo-500" : "text-emerald-600"}`} />
-                  <p className="text-[11px] font-semibold text-slate-700 leading-tight">{f.label}</p>
-                  <p className="text-[9px] text-slate-400 mt-0.5">{locked ? (f.minTier === "elite" ? "Elite" : "Pro") : "Active"}</p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
 
         <div className="p-3 border-t border-slate-100/70 flex items-center gap-2 text-xs text-slate-500">
           <div className="w-7 h-7 rounded-xl overflow-hidden ring-2 ring-white shadow-sm">
@@ -739,12 +697,6 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
             >
               <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
             </button>
-            <div className="hidden sm:block">
-              <p className="text-xs font-bold tracking-widest uppercase text-blue-600 mb-1">Current Mission</p>
-              <h2 className="text-2xl font-display font-bold text-gray-900 flex items-center gap-2">
-                Save ₹15,000 This Month <Target className="w-5 h-5 text-emerald-500" />
-              </h2>
-            </div>
           </div>
 
           <div className="flex items-center gap-3">
@@ -852,31 +804,6 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
               </button>
             )}
 
-
-            <div className="glass-card bg-white/60 border-white px-4 py-2 rounded-2xl flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="text-lg">🔥</span>
-                <div>
-                  <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider leading-none">Streak</p>
-                  <p className="text-sm font-bold text-gray-900 leading-none mt-1">12 Days</p>
-                </div>
-              </div>
-              <div className="w-px h-8 bg-gray-200" />
-              <div className="flex items-center gap-1.5">
-                <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-white font-bold text-sm">
-                  Lvl {persona.level}
-                </div>
-                <div>
-                  <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider leading-none">XP</p>
-                  <div className="w-16 h-1.5 bg-gray-200 rounded-full mt-1 overflow-hidden">
-                    <div className="h-full bg-blue-500 w-[65%]" />
-                  </div>
-                </div>
-              </div>
-            </div>
-            <button className="w-12 h-12 rounded-2xl bg-white/60 border border-white backdrop-blur-xl flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-white shadow-sm transition-all">
-              <Settings className="w-5 h-5" />
-            </button>
           </div>
         </div>
       </motion.div>
