@@ -167,41 +167,90 @@ const UserApp = () => {
     <div className="min-h-screen bg-[#fafafa] flex">
       {/* Sidebar — desktop */}
       <aside className="hidden lg:flex w-64 flex-col border-r border-gray-100 bg-white/60 backdrop-blur-xl p-6 fixed inset-y-0 left-0">
-        <Link to="/" className="flex items-center gap-2 mb-10">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-gray-900 to-gray-700 flex items-center justify-center"><Sparkles className="w-4 h-4 text-white" /></div>
-          <span className="font-display text-lg font-bold">TrackMint</span>
-        </Link>
-        <nav className="space-y-1 flex-1">
-          {([
-            { id: "overview", label: "Overview", img: NAV_ICONS.overview },
-            { id: "transactions", label: "Transactions", img: NAV_ICONS.transactions },
-            { id: "goals", label: "Goals", img: NAV_ICONS.goals },
-            { id: "reports", label: "Reports", img: NAV_ICONS.reports },
-            { id: "automation", label: "Automation", img: NAV_ICONS.automation},
-            { id: "settings", label: "Settings", img: NAV_ICONS.settings },
-            { id: "lumo", label: "Lumo AI", img: NAV_ICONS.aicoach},
-          ] as const).map(({ id, label, img }) => (
-            <button key={id} onClick={() => setTab(id as Tab)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-medium transition-all relative ${tab === id ? "bg-gradient-to-r from-purple-100 via-blue-50 to-cyan-50 text-gray-900 shadow-sm" : "text-gray-600 hover:bg-gray-50"}`}>
-              <img src={img} alt="" className="w-9 h-9 object-contain shrink-0" />
-              <span>{label}</span>
-              {tab === id && <span className="absolute right-3 w-1.5 h-1.5 rounded-full bg-cyan-500" />}
-            </button>
-          ))}
-          <button onClick={() => setTab("automation")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all relative ${tab === "automation" ? "bg-gradient-to-r from-violet-100 via-fuchsia-50 to-purple-50 text-gray-900 shadow-sm" : "text-gray-600 hover:bg-gray-50"}`}>
-            <Zap className="w-4 h-4 text-violet-500" /> Automation
-            <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white">AI</span>
-          </button>
-          <button onClick={() => setTab("settings")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all ${tab === "settings" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-50"}`}>
-            <Settings className="w-4 h-4" /> Settings
-          </button>
-          <Link to="/coach" className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-gray-600 hover:bg-gradient-to-r hover:from-purple-50 hover:to-cyan-50 mt-4 border border-dashed border-purple-200">
-            <Brain className="w-4 h-4 text-blue-500" /> Lumo AI Coach
-          </Link>
-        </nav>
-        <button onClick={handleSignOut} className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-500 hover:bg-gray-100">
-          <LogOut className="w-4 h-4" /> Sign Out
-        </button>
-      </aside>
+
+  <Link to="/" className="flex items-center gap-2 mb-10">
+    <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-gray-900 to-gray-700 flex items-center justify-center">
+      <Sparkles className="w-4 h-4 text-white" />
+    </div>
+
+    <span className="font-display text-lg font-bold">
+      TrackMint
+    </span>
+  </Link>
+
+  <nav className="space-y-1 flex-1">
+
+    {[
+      { id: "overview", label: "Overview", img: NAV_ICONS.overview },
+      { id: "transactions", label: "Transactions", img: NAV_ICONS.transactions },
+      { id: "goals", label: "Goals", img: NAV_ICONS.goals },
+      { id: "reports", label: "Reports", img: NAV_ICONS.reports },
+      { id: "automation", label: "Automation", img: NAV_ICONS.automation },
+      { id: "settings", label: "Settings", img: NAV_ICONS.settings },
+    ].map(({ id, label, img }) => (
+
+      <button
+        key={id}
+        onClick={() => setTab(id as Tab)}
+        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-medium transition-all relative ${
+          tab === id
+            ? "bg-gradient-to-r from-purple-100 via-blue-50 to-cyan-50 text-gray-900 shadow-sm"
+            : "text-gray-600 hover:bg-gray-50"
+        }`}
+      >
+
+        <img
+          src={img}
+          className="w-9 h-9 object-contain shrink-0"
+        />
+
+        <span>{label}</span>
+
+        {tab === id && (
+          <span className="absolute right-3 w-1.5 h-1.5 rounded-full bg-cyan-500" />
+        )}
+
+      </button>
+
+    ))}
+
+    {/* AI COACH */}
+
+    <Link
+      to="/coach"
+      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl mt-4 border border-purple-200 bg-gradient-to-r from-violet-50 to-cyan-50 hover:shadow-md transition-all"
+    >
+
+      <img
+        src={NAV_ICONS.aicoach}
+        className="w-9 h-9 object-contain"
+      />
+
+      <div className="flex flex-col items-start">
+
+        <span className="font-semibold text-gray-900">
+          Lumo AI Coach
+        </span>
+
+        <span className="text-xs text-gray-500">
+          Personal Finance AI
+        </span>
+
+      </div>
+
+    </Link>
+
+  </nav>
+
+  <button
+    onClick={handleSignOut}
+    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-500 hover:bg-gray-100"
+  >
+    <LogOut className="w-4 h-4" />
+    Sign Out
+  </button>
+
+</aside>
 
       <main className="flex-1 lg:ml-64 pb-24 lg:pb-12">
         {/* Top header */}
