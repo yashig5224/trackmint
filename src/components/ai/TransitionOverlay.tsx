@@ -82,7 +82,13 @@ const TransitionOverlay = ({ isVisible, onComplete }: TransitionOverlayProps) =>
             transition={{ duration: 0.5, ease: "easeOut", delay: 0.15 }}
             className="relative z-10 text-center px-6"
           >
-          
+            <motion.div
+              animate={{ scale: [1, 1.12, 1], rotate: [0, 5, -5, 0] }}
+              transition={{ duration: 0.9, ease: "easeInOut" }}
+              className="text-6xl sm:text-7xl mb-5 drop-shadow"
+            >
+              ✨
+            </motion.div>
             <h1 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 mb-2 tracking-tight">
               Entering your financial world
             </h1>

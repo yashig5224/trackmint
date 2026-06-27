@@ -14,14 +14,14 @@ export interface Persona {
 }
 
 const personas: Persona[] = [
-  { id: "student", name: "Student Saver", emoji: "🎒", tagline: "Learn as you earn", description: "Master budgeting on a tight schedule. Great for beginners.", accentHsl: "217 91% 60%", level: 1 },
-  { id: "salary", name: "Salary Warrior", emoji: "💼", tagline: "Optimize every paycheck", description: "Maximize your monthly income with smart allocations.", accentHsl: "220 70% 40%", level: 3 },
-  { id: "investor", name: "Smart Investor", emoji: "📈", tagline: "Make money work for you", description: "AI insights on portfolio, risk and long-term growth.", accentHsl: "152 69% 41%", level: 5 },
-  { id: "hustler", name: "Side Hustler", emoji: "🚀", tagline: "Multiple income streams", description: "Manage freelance, biz and main income seamlessly.", accentHsl: "262 83% 58%", level: 4 },
-  { id: "minimalist", name: "Minimalist Planner", emoji: "🪴", tagline: "Less is more", description: "Clean essential tracking. Focus on what truly matters.", accentHsl: "30 25% 55%", level: 2 },
-  { id: "family", name: "Family Guardian", emoji: "🏡", tagline: "Protect what matters", description: "Plan for your loved ones with safety nets and shared goals.", accentHsl: "20 92% 55%", level: 3 },
-  { id: "luxury", name: "Luxury Dreamer", emoji: "✨", tagline: "Live well, save well", description: "Balance premium lifestyle with smart wealth building.", accentHsl: "45 80% 45%", level: 4 },
-  { id: "crypto", name: "Crypto Explorer", emoji: "🪙", tagline: "Explore web3 wealth", description: "Navigate crypto, NFTs and DeFi with confidence.", accentHsl: "280 80% 60%", level: 3 },
+  { id: "student",    name: "Student Saver",      emoji: "🎒", tagline: "Learn as you earn",       description: "Master budgeting on a tight schedule. Great for beginners.",            accentHsl: "217 91% 60%", level: 1 },
+  { id: "salary",     name: "Salary Warrior",     emoji: "💼", tagline: "Optimize every paycheck", description: "Maximize your monthly income with smart allocations.",                  accentHsl: "220 70% 40%", level: 3 },
+  { id: "investor",   name: "Smart Investor",     emoji: "📈", tagline: "Make money work for you", description: "AI insights on portfolio, risk and long-term growth.",                  accentHsl: "152 69% 41%", level: 5 },
+  { id: "hustler",    name: "Side Hustler",       emoji: "🚀", tagline: "Multiple income streams", description: "Manage freelance, biz and main income seamlessly.",                     accentHsl: "262 83% 58%", level: 4 },
+  { id: "minimalist", name: "Minimalist Planner", emoji: "🪴", tagline: "Less is more",            description: "Clean essential tracking. Focus on what truly matters.",                accentHsl: "30 25% 55%",  level: 2 },
+  { id: "family",     name: "Family Guardian",    emoji: "🏡", tagline: "Protect what matters",    description: "Plan for your loved ones with safety nets and shared goals.",          accentHsl: "20 92% 55%",  level: 3 },
+  { id: "luxury",     name: "Luxury Dreamer",     emoji: "✨", tagline: "Live well, save well",    description: "Balance premium lifestyle with smart wealth building.",                 accentHsl: "45 80% 45%",  level: 4 },
+  { id: "crypto",     name: "Crypto Explorer",    emoji: "🪙", tagline: "Explore web3 wealth",     description: "Navigate crypto, NFTs and DeFi with confidence.",                       accentHsl: "280 80% 60%", level: 3 },
 ];
 
 interface PersonaSelectionProps {
@@ -41,7 +41,7 @@ const PersonaSelection = ({ onSelect }: PersonaSelectionProps) => {
   };
 
   const scroll = (dir: 1 | -1) => {
-    trackRef.current?.scrollBy({ left: dir * 304, behavior: "smooth" });
+    trackRef.current?.scrollBy({ left: dir * 320, behavior: "smooth" });
   };
 
   return (
@@ -50,19 +50,8 @@ const PersonaSelection = ({ onSelect }: PersonaSelectionProps) => {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.6 }}
-      className="
-min-h-screen
-flex
-flex-col
-items-center
-justify-start
-pt-24
-pb-24
-px-4
-relative
-overflow-x-hidden
-overflow-y-auto
-"    >
+      className="min-h-screen flex flex-col items-center justify-center py-12 px-4 relative overflow-hidden"
+    >
       {/* Sharp, vibrant background — NO blur */}
       <div className="absolute inset-0 -z-10">
         <img
@@ -166,7 +155,7 @@ overflow-y-auto
 
           <div
             ref={trackRef}
-            className="flex gap-5 sm:gap-6 overflow-x-auto overflow-y-visible py-10 scrollbar-none snap-x snap-mandatory pb-6 px-2 -mx-2 scroll-smooth"
+            className="flex gap-5 sm:gap-6 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-6 px-2 -mx-2 scroll-smooth"
             style={{ WebkitOverflowScrolling: "touch", perspective: "1200px" }}
           >
             {personas.map((persona, i) => {
@@ -178,17 +167,14 @@ overflow-y-auto
               return (
                 <motion.button
                   key={persona.id}
-                  initial={{
-                    opacity: 0,
-                    y: 80,
-                    scale: .9,
-                    filter: "blur(12px)"
-                  }}
-
+                  initial={{ opacity: 0, y: 40 }}
                   animate={{
-                    opacity: isOther ? 0.4 : 1,
-                    scale: isSelected ? 1.15 : 1,
-                    y: isSelected ? -20 : 0,
+                    opacity: isOther ? 0 : 1,
+                    y: isOther ? 20 : 0,
+                    scale: isSelected ? 1.45 : 1,
+                    rotateY: isHovered && !isSelected ? -8 : 0,
+                    rotateX: isHovered && !isSelected ? 4 : 0,
+                    zIndex: isSelected ? 50 : 1,
                   }}
                   transition={{
                     delay: selectedId ? 0 : 0.05 + i * 0.05,
@@ -201,7 +187,7 @@ overflow-y-auto
                   onHoverStart={() => setHoveredId(persona.id)}
                   onHoverEnd={() => setHoveredId(null)}
                   onClick={() => !selectedId && handleSelect(persona)}
-                  className={`relative shrink-0 snap-center text-left w-[260px] sm:w-[340px] rounded-[28px] cursor-pointer overflow-visible`}
+                  className={`relative shrink-0 snap-center text-left w-[260px] sm:w-[280px] rounded-[28px] cursor-pointer overflow-visible`}
                   style={{ transformStyle: "preserve-3d" }}
                 >
                   {/* Animated gradient border ring */}
@@ -234,7 +220,7 @@ overflow-y-auto
                     }}
                   >
                     {/* Persona image cell */}
-                    <div className="relative h-[300px] w-full overflow-hidden bg-gradient-to-b from-white to-gray-50">
+                    <div className="relative h-[260px] w-full overflow-hidden bg-gradient-to-b from-white to-gray-50">
                       <motion.div
                         animate={isHovered && !isSelected ? { scale: 1.07 } : { scale: 1 }}
                         transition={{ type: "spring", stiffness: 200, damping: 20 }}
