@@ -23,6 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import SEO from "@/components/seo/SEO";
+import TrackMintLogo from "@/assets/logo.png";
 
 /* ────────────────────────────────────────────────────────────── */
 /*  Subtle enterprise backdrop — soft mesh + dotted grid          */
@@ -289,15 +290,19 @@ const Login = () => {
 
       {/* ─────────── LEFT — brand & trust panel (desktop) ─────────── */}
       <div className="hidden lg:flex w-1/2 relative flex-col justify-between p-12 xl:p-16">
-        <Link to="/" className="relative inline-flex items-center gap-2.5 w-fit">
-          <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center">
-            <Sparkles className="w-4.5 h-4.5 text-white" strokeWidth={2} />
-          </div>
+        <Link
+          to="/"
+          className="relative inline-flex items-center gap-3 w-fit transition-transform duration-300 hover:scale-105"
+        >
+          <img
+            src={TrackMintLogo}
+            alt="TrackMint"
+            className="h-12 w-auto object-contain"
+          />
           <span className="font-display text-xl font-semibold tracking-tight text-slate-900">
             TrackMint
           </span>
         </Link>
-
         <div className="relative max-w-md">
           <h1 className="text-4xl xl:text-5xl font-display font-semibold leading-[1.1] tracking-tight text-slate-900">
             The financial OS for modern operators.

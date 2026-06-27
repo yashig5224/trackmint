@@ -24,12 +24,12 @@ import GoalIntelligencePanel from "@/components/dashboard/GoalIntelligencePanel"
 import InsightFeed from "@/components/dashboard/InsightFeed";
 import SubscriptionIntelligencePanel from "@/components/dashboard/SubscriptionIntelligencePanel";
 import SubscriptionPanel from "@/components/subscription/SubscriptionPanel";
-import BankingPanel from "@/components/banking/BankingPanel";
 import SubscriptionCard from "@/components/subscription/SubscriptionCard";
 import { useDemoMode } from "@/contexts/DemoModeContext";
 import { DEMO_TRANSACTIONS, DEMO_GOALS, DEMO_BUDGETS, DEMO_PROFILE } from "@/lib/demoData";
 import DemoPlanSwitcher from "@/components/demo/DemoPlanSwitcher";
 import StatementImport from "@/components/transactions/StatementImport";
+import TrackMintLogo from "@/assets/logo.png";
 
 type Tab = "overview" | "transactions" | "goals" | "reports" | "automation" | "settings";
 
@@ -168,16 +168,16 @@ const UserApp = () => {
       {/* Sidebar — desktop */}
       <aside className="hidden lg:flex w-64 flex-col border-r border-gray-100 bg-white/60 backdrop-blur-xl p-6 fixed inset-y-0 left-0">
 
-  <Link to="/" className="flex items-center gap-2 mb-10">
-    <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-gray-900 to-gray-700 flex items-center justify-center">
-      <Sparkles className="w-4 h-4 text-white" />
-    </div>
-
-    <span className="font-display text-lg font-bold">
-      TrackMint
-    </span>
-  </Link>
-
+  <Link
+  to="/"
+  className="flex items-center justify-center mb-10 transition-transform duration-300 hover:scale-105"
+>
+  <img
+    src={TrackMintLogo}
+    alt="TrackMint"
+    className="h-12 w-auto object-contain"
+  />
+</Link>
   <nav className="space-y-1 flex-1">
 
     {[
@@ -281,9 +281,6 @@ const UserApp = () => {
               >
                 <Settings className="w-4 h-4" />
               </button>
-              <div className="px-3 py-1.5 rounded-full bg-white border border-gray-100 text-xs font-semibold text-gray-700 shadow-sm">
-                Lvl {profile?.level ?? 1} • {profile?.xp ?? 0} XP
-              </div>
               <div className={`px-3 py-1.5 rounded-full text-xs font-bold shadow-sm border ${isElite ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white border-transparent" : isPro ? "bg-gradient-to-r from-indigo-500 to-blue-500 text-white border-transparent" : "bg-white text-gray-600 border-gray-200"}`}>
                 {isElite ? "Elite AI+" : isPro ? "Pro AI" : "Free"}
               </div>
@@ -427,7 +424,6 @@ const UserApp = () => {
                     ) : (
                       <SubscriptionPanel profile={profile} onUpgrade={() => openUpgrade(isPro ? "elite" : "pro")} />
                     )}
-                    {!demo.isDemo && <BankingPanel />}
                     <SettingsPanel profile={profile} onSaved={refreshProfile} onSignOut={handleSignOut} />
                   </div>
                 )}
