@@ -7,12 +7,28 @@ export default function AuthCallback() {
 
   useEffect(() => {
     const finishLogin = async () => {
-      const { data } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      if (data.session) {
-        navigate("/app", { replace: true });
-      } else {
+      if (!session) {
         navigate("/login", { replace: true });
+        return;
+      }
+
+      // Check if profile exists
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", session.user.id)
+        .maybeSingle();
+
+      if (!profile) {
+        // First-time user
+        navigate("/onboarding", { replace: true });
+      } else {
+        // Existing user
+        navigate("/app", { replace: true });
       }
     };
 
