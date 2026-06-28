@@ -6,25 +6,48 @@ export default function AuthCallback() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const finishLogin = async () => {
-      // Wait until Supabase finishes exchanging the auth code
-      for (let i = 0; i < 10; i++) {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+    const handleCallback = async () => {
+      try {
+        const url = new URL(window.location.href);
+        const code = url.searchParams.get("code");
 
-        if (session) {
-          navigate("/app", { replace: true });
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+          if (error) {
+            console.error("Exchange error:", error);
+            navigate("/login", { replace: true });
+            return;
+          }
+        }
+
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          navigate("/login", { replace: true });
           return;
         }
 
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("onboarding_completed")
+          .eq("id", user.id)
+          .single();
 
-      navigate("/login", { replace: true });
+        if (profile?.onboarding_completed) {
+          navigate("/app", { replace: true });
+        } else {
+          navigate("/onboarding", { replace: true });
+        }
+      } catch (err) {
+        console.error(err);
+        navigate("/login", { replace: true });
+      }
     };
 
-    finishLogin();
+    handleCallback();
   }, [navigate]);
 
   return (
