@@ -62,9 +62,6 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
       <div className="min-h-screen bg-[#fafafa] flex items-center justify-center p-6 relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-100/30 rounded-full blur-[100px] animate-pulse" />
         <div className="relative z-10 flex flex-col items-center text-center max-w-md">
-          <motion.div animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 2, repeat: Infinity }} className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center mb-8 shadow-2xl shadow-blue-500/30">
-            <Sparkles className="w-10 h-10 text-white" />
-          </motion.div>
           <h2 className="text-3xl font-display font-bold text-gray-900 mb-4">Synthesizing your financial DNA…</h2>
           <p className="text-gray-500">Setting up your personalized OS</p>
         </div>
