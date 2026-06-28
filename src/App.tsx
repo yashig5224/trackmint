@@ -42,8 +42,16 @@ const App = () => (
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/coach" element={<CoachRoute />} />
-            <Route path="/dashboard" element={<DemoModeProvider><UserApp /></DemoModeProvider>} />
-
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DemoModeProvider>
+                    <UserApp />
+                  </DemoModeProvider>
+                </ProtectedRoute>
+              }
+            />
             {/* Protected */}
             <Route path="/onboarding" element={
               <ProtectedRoute requireOnboarding={false}><OnboardingFlow /></ProtectedRoute>
