@@ -7,26 +7,21 @@ export default function AuthCallback() {
 
   useEffect(() => {
     const finishLogin = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      // Wait until Supabase finishes exchanging the auth code
+      for (let i = 0; i < 10; i++) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-      if (!session) {
-        navigate("/login", { replace: true });
-        return;
+        if (session) {
+          navigate("/app", { replace: true });
+          return;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("onboarding_completed")
-        .eq("id", session.user.id)
-        .single();
-
-      if (!profile?.onboarding_completed) {
-        navigate("/onboarding", { replace: true });
-      } else {
-        navigate("/app", { replace: true });
-      }
+      navigate("/login", { replace: true });
     };
 
     finishLogin();

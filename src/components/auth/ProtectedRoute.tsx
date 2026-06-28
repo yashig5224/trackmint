@@ -7,18 +7,20 @@ interface ProtectedRouteProps {
   requireOnboarding?: boolean;
 }
 
-const ProtectedRoute = ({
+export default function ProtectedRoute({
   children,
   requireOnboarding = true,
-}: ProtectedRouteProps) => {
+}: ProtectedRouteProps) {
   const { user, profile, loading } = useAuth();
 
-  console.log("ProtectedRoute");
+  console.log("========== ProtectedRoute ==========");
   console.log("Loading:", loading);
   console.log("User:", user);
   console.log("Profile:", profile);
 
-  // Wait until auth is fully initialized
+  // ----------------------------
+  // Wait for auth initialization
+  // ----------------------------
   if (loading) {
     return (
       <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
@@ -27,14 +29,21 @@ const ProtectedRoute = ({
     );
   }
 
-  // No authenticated user
+  // ----------------------------
+  // User not logged in
+  // ----------------------------
   if (!user) {
-    console.log("Redirecting to login");
+    console.log("➡ Redirecting to /login");
     return <Navigate to="/login" replace />;
   }
 
-  // User exists but profile still loading
-  if (user && profile === null) {
+  // ----------------------------------------------------
+  // Profile still loading
+  // (undefined means AuthContext hasn't finished yet)
+  // ----------------------------------------------------
+  if (profile === undefined) {
+    console.log("⏳ Waiting for profile...");
+
     return (
       <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
         <div className="w-10 h-10 rounded-full border-2 border-gray-200 border-t-gray-900 animate-spin" />
@@ -42,18 +51,41 @@ const ProtectedRoute = ({
     );
   }
 
-  // Redirect unfinished onboarding users
+  // ----------------------------------------------------
+  // Profile missing (should almost never happen)
+  // ----------------------------------------------------
+  if (profile === null) {
+    console.log("❌ Profile not found");
+
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <h2 className="text-xl font-semibold">
+          Unable to load your profile
+        </h2>
+
+        <p className="text-gray-500">
+          Please refresh the page or sign in again.
+        </p>
+      </div>
+    );
+  }
+
+  // ----------------------------------------------------
+  // User needs onboarding
+  // ----------------------------------------------------
   if (
     requireOnboarding &&
-    profile &&
-    !profile.onboarding_completed
+    profile.onboarding_completed !== true
   ) {
-    console.log("Redirecting to onboarding");
+    console.log("➡ Redirecting to /onboarding");
+
     return <Navigate to="/onboarding" replace />;
   }
 
-  console.log("Access granted");
-  return <>{children}</>;
-};
+  // ----------------------------------------------------
+  // Everything is good
+  // ----------------------------------------------------
+  console.log("✅ Access granted");
 
-export default ProtectedRoute;
+  return <>{children}</>;
+}
