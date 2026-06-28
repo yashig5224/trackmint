@@ -16,18 +16,15 @@ export default function AuthCallback() {
         return;
       }
 
-      // Check if profile exists
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id")
+        .select("onboarding_completed")
         .eq("id", session.user.id)
-        .maybeSingle();
+        .single();
 
-      if (!profile) {
-        // First-time user
+      if (!profile?.onboarding_completed) {
         navigate("/onboarding", { replace: true });
       } else {
-        // Existing user
         navigate("/app", { replace: true });
       }
     };

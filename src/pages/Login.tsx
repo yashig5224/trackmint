@@ -201,7 +201,7 @@ const Login = () => {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/app`,
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
             data: { full_name: fullName },
           },
         });
@@ -210,7 +210,7 @@ const Login = () => {
           sendEmail({
             to: email,
             templateName: "welcome",
-            data: { name: fullName, appUrl: `${window.location.origin}/app` },
+            data: { name: fullName, appUrl: `${window.location.origin}/auth/callback` },
           }),
         ).catch(() => { });
         toast.success(
