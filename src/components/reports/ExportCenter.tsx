@@ -11,10 +11,6 @@ interface Props {
 
 const REPORTS: { kind: ReportKind; title: string; subtitle: string; icon: typeof FileText; tone: string; tierGate?: "pro" | "elite" }[] = [
   { kind: "monthly", title: "Monthly Financial Report", subtitle: "Income, expenses, categories & transactions.", icon: FileText, tone: "from-indigo-500 to-blue-500" },
-  { kind: "goals", title: "Goal Progress Report", subtitle: "Every milestone toward your goals.", icon: Target, tone: "from-emerald-500 to-teal-500" },
-  { kind: "ai_insights", title: "AI Insights Report", subtitle: "Lumo’s personalized recommendations.", icon: Brain, tone: "from-violet-500 to-fuchsia-500", tierGate: "pro" },
-  { kind: "spending", title: "Spending Analytics Report", subtitle: "Where every unit of currency goes.", icon: TrendingUp, tone: "from-amber-500 to-rose-500", tierGate: "pro" },
-  { kind: "elite_forecast", title: "Elite Wealth Forecast", subtitle: "12-month multi-horizon projections.", icon: Crown, tone: "from-fuchsia-500 via-violet-500 to-indigo-500", tierGate: "elite" },
 ];
 
 export const ExportCenter = ({ baseInput, onUpgrade }: Props) => {
