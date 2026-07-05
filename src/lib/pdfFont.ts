@@ -1,8 +1,8 @@
 // Loads a real Unicode TTF (Roboto) and registers it with jsPDF.
-// Without this, jsPDF uses the built-in "Helvetica" core font which is NOT
+// Without this, jsPDF uses the built-in "Inter" core font which is NOT
 // embedded in the output PDF. Viewers substitute it with a system font that
 // has different glyph widths → characters overlap and look scattered.
-// Roboto also has proper glyphs for ₹, —, →, · etc. that WinAnsi Helvetica lacks.
+// Roboto also has proper glyphs for ₹, —, →, · etc. that WinAnsi Inter lacks.
 
 import type jsPDF from "jspdf";
 
@@ -50,9 +50,9 @@ async function loadFonts(): Promise<void> {
 }
 
 /**
- * Registers Roboto as the "helvetica" family on the given jsPDF doc.
- * Overriding the helvetica alias means every existing
- * `setFont("helvetica", ...)` call in the codebase picks up the real embedded
+ * Registers Roboto as the "Inter" family on the given jsPDF doc.
+ * Overriding the Inter alias means every existing
+ * `setFont("Inter", ...)` call in the codebase picks up the real embedded
  * font with no other changes required.
  */
 export async function registerAppFonts(doc: jsPDF): Promise<void> {
@@ -60,16 +60,16 @@ export async function registerAppFonts(doc: jsPDF): Promise<void> {
     await loadFonts();
     if (!cachedRegular || !cachedBold) return;
     doc.addFileToVFS("Roboto-Regular.ttf", cachedRegular);
-    doc.addFont("Roboto-Regular.ttf", "helvetica", "normal");
+    doc.addFont("Roboto-Regular.ttf", "Inter", "normal");
     doc.addFileToVFS("Roboto-Bold.ttf", cachedBold);
-    doc.addFont("Roboto-Bold.ttf", "helvetica", "bold");
+    doc.addFont("Roboto-Bold.ttf", "Inter", "bold");
     // Also register italic/bolditalic fallbacks so jsPDF never falls back to
     // the un-embedded core font when a style is requested.
-    doc.addFont("Roboto-Regular.ttf", "helvetica", "italic");
-    doc.addFont("Roboto-Bold.ttf", "helvetica", "bolditalic");
-    doc.setFont("helvetica", "normal");
+    doc.addFont("Roboto-Regular.ttf", "Inter", "italic");
+    doc.addFont("Roboto-Bold.ttf", "Inter", "bolditalic");
+    doc.setFont("Inter", "normal");
   } catch (err) {
     // Fall back silently to the built-in font on network failure.
-    console.warn("[pdf] font embed failed, falling back to core Helvetica", err);
+    console.warn("[pdf] font embed failed, falling back to core Inter", err);
   }
 }

@@ -1,4 +1,4 @@
-// FinTrack AI — Premium Investor-Grade Report Engine (v3)
+// TrackMint AI — Premium Investor-Grade Report Engine (v3)
 // Every figure derived from real Supabase data. No placeholders.
 // 11 themed pages with branded gradient layout, modern charts,
 // AI executive analysis, deep intelligence sections and a 90-day action plan.
@@ -148,7 +148,7 @@ function panel(d: Doc, x: number, y: number, w: number, h: number, title?: strin
 
   // Section title
   if (title) {
-    d.setFont("helvetica", "bold");
+    d.setFont("Inter", "bold");
     d.setFontSize(8);
     d.setTextColor(...MUTED);
 
@@ -162,14 +162,14 @@ function brandedHeader(d: Doc, title: string, subtitle: string, tier: string) {
   d.roundedRect(20, 16, 24, 24, 6, 6, "F");
   d.setTextColor(...PRIMARY);
   d.setFontSize(13);
-  d.setFont("helvetica", "bold");
+  d.setFont("Inter", "bold");
   d.text("FT", 32, 31, { align: "center" });
   d.setTextColor(...PAPER);
   d.setFontSize(13);
-  d.setFont("helvetica", "bold");
-  d.text("FinTrack AI", 52, 27);
+  d.setFont("Inter", "bold");
+  d.text("TrackMint AI", 52, 27);
   d.setFontSize(7.5);
-  d.setFont("helvetica", "normal");
+  d.setFont("Inter", "normal");
   d.text("Personal Financial Operating System", 52, 36);
   // tier pill
   const pill = tier === "elite" ? "ELITE AI+" : tier === "pro" ? "PRO AI" : "STARTER";
@@ -182,15 +182,15 @@ function brandedHeader(d: Doc, title: string, subtitle: string, tier: string) {
   d.roundedRect(W(d) - pw - 20, 18, pw, 18, 9, 9, "S");
   d.setTextColor(...PAPER);
   d.setFontSize(8);
-  d.setFont("helvetica", "bold");
+  d.setFont("Inter", "bold");
   d.text(pill, W(d) - pw / 2 - 20, 29.5, { align: "center" });
   // title
   d.setTextColor(...INK);
   d.setFontSize(20);
-  d.setFont("helvetica", "bold");
+  d.setFont("Inter", "bold");
   d.text(title, 20, 56);
   d.setFontSize(9);
-  d.setFont("helvetica", "normal");
+  d.setFont("Inter", "normal");
   d.setTextColor(...MUTED);
   d.text(subtitle, 20, 72);
   // divider
@@ -208,9 +208,9 @@ function pageFooter(d: Doc) {
     d.setLineWidth(0.3);
     d.line(20, H(d) - 24, W(d) - 20, H(d) - 24);
     d.setFontSize(8.5);
-    d.setFont("helvetica", "normal");
+    d.setFont("Inter", "normal");
     d.setTextColor(...MUTED);
-    d.text("FinTrack AI · Confidential financial intelligence", 20, H(d) - 14);
+    d.text("TrackMint AI · Confidential financial intelligence", 20, H(d) - 14);
     d.text(`Page ${i} of ${total}`, W(d) - 20, H(d) - 14, { align: "right" });
     // tiny brand dot
     d.setFillColor(...PRIMARY);
@@ -220,11 +220,11 @@ function pageFooter(d: Doc) {
 
 function sectionLabel(d: Doc, kicker: string, title: string, y: number) {
   d.setFontSize(8.5);
-  d.setFont("helvetica", "bold");
+  d.setFont("Inter", "bold");
   d.setTextColor(...PRIMARY);
   d.text(kicker.toUpperCase(), 20, y);
   d.setFontSize(15);
-  d.setFont("helvetica", "bold");
+  d.setFont("Inter", "bold");
   d.setTextColor(...INK);
   d.text(title, 20, y + 12);
   d.setDrawColor(...PRIMARY);
@@ -258,19 +258,19 @@ function kpiCard(
   d.roundedRect(x, y, w, 4, 2, 2, "F");
 
   d.setFontSize(8);
-  d.setFont("helvetica", "bold");
+  d.setFont("Inter", "bold");
   d.setTextColor(...MUTED);
 
   d.text(label.toUpperCase(), x + 10, y + 18);
 
   d.setFontSize(22);
-  d.setFont("helvetica", "bold");
+  d.setFont("Inter", "bold");
   d.setTextColor(...INK);
 
   d.text(value, x + 10, y + 38);
 
   d.setFontSize(8);
-  d.setFont("helvetica", "normal");
+  d.setFont("Inter", "normal");
   d.setTextColor(...MUTED);
 
   d.text(sub, x + 10, y + h - 8);
@@ -296,7 +296,7 @@ function paragraph(
 ) {
   const size = opts.size || 9;
   d.setFontSize(size);
-  d.setFont("helvetica", opts.bold ? "bold" : "normal");
+  d.setFont("Inter", opts.bold ? "bold" : "normal");
   d.setTextColor(...(opts.color || SUBINK));
   const lines = d.splitTextToSize(text, w);
   d.text(lines, x, y);
@@ -539,14 +539,14 @@ function scoreGauge(d: Doc, cx: number, cy: number, r: number, score: number, gr
   }
   // text
   d.setTextColor(...INK);
-  d.setFont("helvetica", "bold");
+  d.setFont("Inter", "bold");
   d.setFontSize(28);
   d.text(String(Math.round(score)), cx, cy + 4, { align: "center" });
   d.setFontSize(8);
-  d.setFont("helvetica", "normal");
+  d.setFont("Inter", "normal");
   d.setTextColor(...MUTED);
   d.text("/ 100", cx, cy + 14, { align: "center" });
-  d.setFont("helvetica", "bold");
+  d.setFont("Inter", "bold");
   d.setFontSize(10);
   d.setTextColor(...col);
   d.text(grade.toUpperCase(), cx, cy + 28, { align: "center" });
@@ -739,29 +739,28 @@ function pageCover(doc: Doc, input: ReportInput, score: number, grade: string) {
   doc.roundedRect(40, 60, 36, 36, 9, 9, "F");
   doc.setTextColor(...PRIMARY);
   doc.setFontSize(20);
-  doc.setFont("helvetica", "bold");
+  doc.setFont("Inter", "bold");
   resetText(doc);
 
-  doc.text("FT", 58, 84, { align: "center" });
   doc.setTextColor(...PAPER);
   doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
+  doc.setFont("Inter", "bold");
   resetText(doc);
-  doc.text("FinTrack AI", 84, 78);
+  doc.text("TrackMint AI", 84, 78);
   doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
+  doc.setFont("Inter", "normal");
   resetText(doc);
   doc.text("Personal Financial Operating System", 84, 87);
 
   // title
   doc.setFontSize(40);
-  doc.setFont("helvetica", "bold");
+  doc.setFont("Inter", "bold");
   doc.setTextColor(...PAPER);
   const lines = doc.splitTextToSize(titleFor(input.kind), W(doc) - 80);
   resetText(doc);
   doc.text(lines, 40, 190);
   doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
+  doc.setFont("Inter", "normal");
   doc.setTextColor(230, 230, 255);
   paragraph(doc, 40, 230, W(doc) - 80, subtitleFor(input.kind), { size: 11, color: [230, 230, 255] });
 
@@ -785,12 +784,12 @@ function pageCover(doc: Doc, input: ReportInput, score: number, grade: string) {
     const x = 56 + col * half;
     const y = cy + 30 + row * 44;
     doc.setFontSize(7);
-    doc.setFont("helvetica", "bold");
+    doc.setFont("Inter", "bold");
     doc.setTextColor(...MUTED);
     resetText(doc);
     doc.text(m[0], x, y);
     doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
+    doc.setFont("Inter", "bold");
     doc.setTextColor(...INK);
     resetText(doc);
     doc.text(m[1], x, y + 14);
@@ -801,12 +800,12 @@ function pageCover(doc: Doc, input: ReportInput, score: number, grade: string) {
   doc.setFillColor(...PAPER);
   doc.roundedRect(40, by, W(doc) - 80, 170, 12, 12, "F");
   doc.setFontSize(8);
-  doc.setFont("helvetica", "bold");
+  doc.setFont("Inter", "bold");
   doc.setTextColor(...MUTED);
   resetText(doc);
   doc.text("FINANCIAL HEALTH SCORE", 60, by + 24);
   doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
+  doc.setFont("Inter", "normal");
   doc.setTextColor(...SUBINK);
   paragraph(
     doc,
@@ -821,7 +820,7 @@ function pageCover(doc: Doc, input: ReportInput, score: number, grade: string) {
   // footer line
   doc.setTextColor(...PAPER);
   doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
+  doc.setFont("Inter", "normal");
   resetText(doc);
   doc.text("Confidential · Generated by Lumo AI · fintrack.ai", W(doc) / 2, H(doc) - 28, { align: "center" });
 }
@@ -850,24 +849,24 @@ function pageHealthBreakdown(
   scoreGauge(doc, 90, y + 70, 44, hs.score, hs.grade);
   const tx = 160;
   doc.setFontSize(8);
-  doc.setFont("helvetica", "bold");
+  doc.setFont("Inter", "bold");
   doc.setTextColor(...MUTED);
   resetText(doc);
   doc.text("COMPOSITE SCORE", tx, y + 24);
   doc.setFontSize(22);
-  doc.setFont("helvetica", "bold");
+  doc.setFont("Inter", "bold");
   doc.setTextColor(...INK);
   resetText(doc);
   doc.text(`${hs.score}/100 · ${hs.grade}`, tx, y + 44);
   const delta = hs.monthlyChange;
   const dCol: RGB = delta >= 0 ? GOOD : BAD;
   doc.setFontSize(9);
-  doc.setFont("helvetica", "bold");
+  doc.setFont("Inter", "bold");
   doc.setTextColor(...dCol);
   resetText(doc);
   doc.text(`${delta >= 0 ? "▲" : "▼"} ${Math.abs(delta)} pts vs prior month`, tx, y + 60);
   doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
+  doc.setFont("Inter", "normal");
   doc.setTextColor(...MUTED);
   paragraph(
     doc,
@@ -903,12 +902,12 @@ function pageHealthBreakdown(
   hs.factors.forEach((f) => {
     const tone: RGB = f.status === "good" ? GOOD : f.status === "warn" ? WARN : f.status === "bad" ? BAD : SOFT;
     doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
+    doc.setFont("Inter", "bold");
     doc.setTextColor(...INK);
     resetText(doc);
     doc.text(f.label, 32, fy);
     doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
+    doc.setFont("Inter", "normal");
     doc.setTextColor(...MUTED);
     resetText(doc);
     resetText(doc);
@@ -916,7 +915,7 @@ function pageHealthBreakdown(
     resetText(doc);
     doc.text(f.detail, 180, fy);
     doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
+    doc.setFont("Inter", "bold");
     doc.setTextColor(...tone);
     resetText(doc);
     doc.text(`${Math.round(f.score)}`, W(doc) - 32, fy, { align: "right" });
@@ -1200,7 +1199,7 @@ function pageCategoryIntel(doc: Doc, input: ReportInput) {
   panel(doc, 20, y, W(doc) - 40, 200, "Spending Distribution");
   donut(doc, 90, y + 110, 52, items.slice(0, 8));
   doc.setFontSize(8);
-  doc.setFont("helvetica", "bold");
+  doc.setFont("Inter", "bold");
   doc.setTextColor(...INK);
   resetText(doc);
   doc.text(fmt(total, input.currency), 90, y + 108, { align: "center" });
@@ -1215,11 +1214,11 @@ function pageCategoryIntel(doc: Doc, input: ReportInput) {
     doc.setFillColor(...col);
     doc.roundedRect(170, ly - 5, 8, 8, 1.5, 1.5, "F");
     doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
+    doc.setFont("Inter", "bold");
     doc.setTextColor(...INK);
     resetText(doc);
     doc.text(it.name, 184, ly);
-    doc.setFont("helvetica", "normal");
+    doc.setFont("Inter", "normal");
     doc.setTextColor(...MUTED);
     resetText(doc);
     doc.text(`${fmt(it.value, input.currency)} · ${pct((it.value / total) * 100)}`, W(doc) - 32, ly, {
@@ -1261,17 +1260,17 @@ function pageCategoryIntel(doc: Doc, input: ReportInput) {
     doc.setFillColor(...c);
     doc.roundedRect(x, y, 3, 76, 1.5, 1.5, "F");
     doc.setFontSize(7);
-    doc.setFont("helvetica", "bold");
+    doc.setFont("Inter", "bold");
     doc.setTextColor(...MUTED);
     resetText(doc);
     doc.text(label.toUpperCase(), x + 12, y + 16);
     doc.setFontSize(13);
-    doc.setFont("helvetica", "bold");
+    doc.setFont("Inter", "bold");
     doc.setTextColor(...INK);
     resetText(doc);
     doc.text(name, x + 12, y + 36);
     doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
+    doc.setFont("Inter", "normal");
     doc.setTextColor(...c);
     resetText(doc);
     doc.text(sub, x + 12, y + 56);
@@ -1302,16 +1301,16 @@ function pageCategoryIntel(doc: Doc, input: ReportInput) {
       const variance = sp - lim;
       const tone: RGB = ratio > 1 ? BAD : ratio > 0.85 ? WARN : GOOD;
       doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
+      doc.setFont("Inter", "bold");
       doc.setTextColor(...INK);
       resetText(doc);
       doc.text(b.category, 32, by);
-      doc.setFont("helvetica", "normal");
+      doc.setFont("Inter", "normal");
       doc.setTextColor(...MUTED);
       resetText(doc);
       doc.text(`${fmt(sp, input.currency)} / ${fmt(lim, input.currency)}`, W(doc) - 110, by, { align: "right" });
       doc.setTextColor(...tone);
-      doc.setFont("helvetica", "bold");
+      doc.setFont("Inter", "bold");
       resetText(doc);
       doc.text(`${variance >= 0 ? "+" : "−"}${fmt(Math.abs(variance), input.currency)}`, W(doc) - 32, by, {
         align: "right",
@@ -1385,12 +1384,12 @@ function pageGoalIntel(doc: Doc, input: ReportInput) {
 
     panel(doc, 20, y, W(doc) - 40, 125);
     doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
+    doc.setFont("Inter", "bold");
     doc.setTextColor(...INK);
     resetText(doc);
     doc.text(g.goal_name, 32, y + 20);
     doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
+    doc.setFont("Inter", "normal");
     doc.setTextColor(...MUTED);
     resetText(doc);
     doc.text(
@@ -1403,7 +1402,7 @@ function pageGoalIntel(doc: Doc, input: ReportInput) {
     doc.roundedRect(W(doc) - 70, y + 14, 50, 14, 7, 7, "F");
     doc.setTextColor(...PAPER);
     doc.setFontSize(7);
-    doc.setFont("helvetica", "bold");
+    doc.setFont("Inter", "bold");
     resetText(doc);
     doc.text(`${risk.toUpperCase()} RISK`, W(doc) - 45, y + 23, { align: "center" });
     // progress bar
@@ -1430,12 +1429,12 @@ function pageGoalIntel(doc: Doc, input: ReportInput) {
       ["Goal Health", `${healthScore}/100`],
     ].forEach(([k, v], i) => {
       doc.setFontSize(7);
-      doc.setFont("helvetica", "bold");
+      doc.setFont("Inter", "bold");
       doc.setTextColor(...MUTED);
       resetText(doc);
       doc.text(k.toUpperCase(), mx + colW * i, my);
       doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
+      doc.setFont("Inter", "bold");
       doc.setTextColor(...INK);
       resetText(doc);
       doc.text(v, mx + colW * i, my + 14);
@@ -1498,21 +1497,21 @@ function pageTransactionIntel(doc: Doc, input: ReportInput) {
   let ty = y + 28;
   top10.forEach((t, i) => {
     doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
+    doc.setFont("Inter", "bold");
     doc.setTextColor(...SOFT);
     resetText(doc);
     doc.text(String(i + 1).padStart(2, "0"), 32, ty);
     doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
+    doc.setFont("Inter", "bold");
     doc.setTextColor(...INK);
     resetText(doc);
     doc.text(t.title, 48, ty);
-    doc.setFont("helvetica", "normal");
+    doc.setFont("Inter", "normal");
     doc.setTextColor(...MUTED);
     resetText(doc);
     doc.text(`${t.category || "Other"} · ${t.transaction_date}`, 48, ty + 8);
     doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
+    doc.setFont("Inter", "bold");
     doc.setTextColor(...BAD);
     resetText(doc);
     doc.text(`−${fmt(Number(t.amount), input.currency)}`, W(doc) - 32, ty + 4, { align: "right" });
@@ -1532,17 +1531,17 @@ function pageTransactionIntel(doc: Doc, input: ReportInput) {
   } else {
     subs.slice(0, 7).forEach((s) => {
       doc.setFontSize(9);
-      doc.setFont("helvetica", "bold");
+      doc.setFont("Inter", "bold");
       doc.setTextColor(...INK);
       resetText(doc);
       doc.text(s.name.slice(0, 24), 30, sy);
-      doc.setFont("helvetica", "normal");
+      doc.setFont("Inter", "normal");
       doc.setTextColor(...MUTED);
       doc.setFontSize(7.5);
       resetText(doc);
       doc.text(`${s.months.size} months · ~${fmt(s.amount, input.currency)}/mo`, 30, sy + 9);
       doc.setFontSize(9);
-      doc.setFont("helvetica", "bold");
+      doc.setFont("Inter", "bold");
       doc.setTextColor(...ACCENT);
       resetText(doc);
       doc.text(fmt(s.total, input.currency), 30 + cw - 16, sy + 4, { align: "right" });
@@ -1557,17 +1556,17 @@ function pageTransactionIntel(doc: Doc, input: ReportInput) {
     .slice(0, 8)
     .forEach((m) => {
       doc.setFontSize(9);
-      doc.setFont("helvetica", "bold");
+      doc.setFont("Inter", "bold");
       doc.setTextColor(...INK);
       resetText(doc);
       doc.text(m.name.slice(0, 22), 40 + cw, my);
-      doc.setFont("helvetica", "normal");
+      doc.setFont("Inter", "normal");
       doc.setTextColor(...MUTED);
       doc.setFontSize(7.5);
       resetText(doc);
       doc.text(`${m.count} visits · avg ${fmt(m.total / m.count, input.currency)}`, 40 + cw, my + 9);
       doc.setFontSize(9);
-      doc.setFont("helvetica", "bold");
+      doc.setFont("Inter", "bold");
       doc.setTextColor(...BAD);
       resetText(doc);
       doc.text(fmt(m.total, input.currency), 30 + cw * 2 - 16, my + 4, { align: "right" });
@@ -1666,11 +1665,11 @@ function pageForecast(doc: Doc, input: ReportInput) {
             ? `ETA ${new Date(g.etaDate).toLocaleDateString("en", { month: "short", year: "numeric" })}`
             : "—";
       doc.setFontSize(9);
-      doc.setFont("helvetica", "bold");
+      doc.setFont("Inter", "bold");
       doc.setTextColor(...INK);
       resetText(doc);
       doc.text(g.name, 32, gy);
-      doc.setFont("helvetica", "normal");
+      doc.setFont("Inter", "normal");
       doc.setTextColor(...MUTED);
       resetText(doc);
       doc.text(etaTxt, 32, gy + 10);
@@ -1678,7 +1677,7 @@ function pageForecast(doc: Doc, input: ReportInput) {
       doc.roundedRect(W(doc) - 70, gy - 6, 50, 14, 7, 7, "F");
       doc.setTextColor(...PAPER);
       doc.setFontSize(7);
-      doc.setFont("helvetica", "bold");
+      doc.setFont("Inter", "bold");
       resetText(doc);
       doc.text(g.risk.toUpperCase(), W(doc) - 45, gy + 3, { align: "center" });
       gy += 22;
@@ -1795,11 +1794,11 @@ async function pageCoachIntel(doc: Doc, input: ReportInput) {
     topTopics.forEach(([topic, count], i) => {
       const tone = palette(i);
       doc.setFontSize(9);
-      doc.setFont("helvetica", "bold");
+      doc.setFont("Inter", "bold");
       doc.setTextColor(...INK);
       resetText(doc);
       doc.text(topic, 30, ty);
-      doc.setFont("helvetica", "normal");
+      doc.setFont("Inter", "normal");
       doc.setTextColor(...MUTED);
       resetText(doc);
       doc.text(`${count} mention${count > 1 ? "s" : ""}`, 30 + cw - 16, ty, { align: "right" });
@@ -1830,13 +1829,13 @@ async function pageCoachIntel(doc: Doc, input: ReportInput) {
       doc.circle(40 + cw, qy - 2, 1.4, "F");
       const lines = doc.splitTextToSize(`"${q.question.slice(0, 90)}${q.question.length > 90 ? "…" : ""}"`, cw - 30);
       doc.setFontSize(8);
-      doc.setFont("helvetica", "italic");
+      doc.setFont("Inter", "italic");
       doc.setTextColor(...SUBINK);
       resetText(doc);
       resetText(doc);
       doc.text(lines, 46 + cw, qy);
       if (q.count > 1) {
-        doc.setFont("helvetica", "bold");
+        doc.setFont("Inter", "bold");
         doc.setTextColor(...MUTED);
         resetText(doc);
         doc.text(`×${q.count}`, 40 + cw + cw - 24, qy, { align: "right" });
@@ -1958,7 +1957,7 @@ function pageActionPlan(doc: Doc, input: ReportInput, score: number) {
     doc.setFillColor(...s.tone);
     doc.roundedRect(20, y, 3, h, 1.5, 1.5, "F");
     doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
+    doc.setFont("Inter", "bold");
     doc.setTextColor(...INK);
     resetText(doc);
     doc.text(s.title, 32, y + 20);
