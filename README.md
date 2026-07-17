@@ -1,4 +1,4 @@
-# 🚀 TrackMint
+#  TrackMint
 
 > Smart Expense Tracker with AI-Powered Financial Insights
 
