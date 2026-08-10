@@ -6,7 +6,6 @@ import DashboardPreview from "@/components/landing/DashboardPreview";
 import ProblemSolution from "@/components/landing/ProblemSolution";
 import HowItWorks from "@/components/landing/HowItWorks";
 import DemoVsUser from "@/components/landing/DemoVsUser";
-import StatsAndTestimonials from "@/components/landing/StatsAndTestimonials";
 import CTASection from "@/components/landing/CTASection";
 import Footer from "@/components/landing/Footer";
 import AmbientLayer from "@/components/landing/AmbientLayer";
@@ -52,7 +51,6 @@ const Index = () => {
         <ProblemSolution />
         <HowItWorks />
         <DemoVsUser />
-        <StatsAndTestimonials />
         <PricingPreview />
         <CTASection />
         <Footer />
