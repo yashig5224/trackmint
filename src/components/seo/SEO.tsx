@@ -1,6 +1,6 @@
 import { Helmet } from "react-helmet-async";
 
-const SITE = "https://finbee.lovable.app";
+const SITE = "https://trackmint-ashen.vercel.app";
 
 interface SEOProps {
   title: string;

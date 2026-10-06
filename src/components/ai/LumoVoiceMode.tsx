@@ -389,7 +389,7 @@ const LumoVoiceMode = ({ open, onClose, tier, persona, selectedModel, onTranscri
       return;
     }
 
-    const clean = stripMarkdown(text).slice(0, 850);
+    const clean = stripMarkdown(text).slice(0, 1000);
     setLiveSpeechText(clean);
     if (!clean) {
       setVoiceState("idle");
@@ -399,34 +399,60 @@ const LumoVoiceMode = ({ open, onClose, tier, persona, selectedModel, onTranscri
 
     const generation = speechGenerationRef.current + 1;
     speechGenerationRef.current = generation;
+
     try {
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(clean);
-      const voice = pickWarmVoice(selectedVoiceRef.current);
-      if (voice) utterance.voice = voice;
-      utterance.rate = speechRateRef.current;
-      utterance.pitch = 1.03;
-      utterance.volume = 1;
-      utterance.onstart = () => {
-        if (speechGenerationRef.current !== generation) return;
-        setVoiceState("speaking");
-      };
-      utterance.onend = () => {
-        if (speechGenerationRef.current !== generation) return;
+
+      // Chunk into natural conversational sentences to avoid Chromium & Safari 15s freeze
+      const rawSentences = clean.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [clean];
+      const sentences = rawSentences.map((s) => s.trim()).filter(Boolean);
+
+      if (sentences.length === 0) {
         setVoiceState("idle");
-        setLiveSpeechText("");
         scheduleContinuousListen();
-      };
-      utterance.onerror = () => {
-        if (speechGenerationRef.current !== generation) return;
-        setSafeError({
-          title: "Lumo couldn’t play audio.",
-          detail: "The text response was generated, but voice playback failed.",
-          hint: "Check system audio, then retry.",
-        });
-      };
+        return;
+      }
+
       setVoiceState("speaking");
-      window.speechSynthesis.speak(utterance);
+
+      let currentIndex = 0;
+      const playNext = () => {
+        if (speechGenerationRef.current !== generation) return;
+
+        if (currentIndex >= sentences.length) {
+          setVoiceState("idle");
+          setLiveSpeechText("");
+          scheduleContinuousListen();
+          return;
+        }
+
+        const sentenceText = sentences[currentIndex];
+        currentIndex++;
+
+        const utterance = new SpeechSynthesisUtterance(sentenceText);
+        const voice = pickWarmVoice(selectedVoiceRef.current);
+        if (voice) utterance.voice = voice;
+        utterance.rate = speechRateRef.current;
+        utterance.pitch = 1.03;
+        utterance.volume = 1;
+
+        utterance.onend = () => {
+          if (speechGenerationRef.current !== generation) return;
+          playNext();
+        };
+
+        utterance.onerror = (e) => {
+          if (speechGenerationRef.current !== generation) return;
+          // If canceled deliberately, don't show error
+          if (e.error === "canceled" || e.error === "interrupted") return;
+          console.warn("Speech synthesis chunk error", e);
+          playNext(); // attempt next sentence
+        };
+
+        window.speechSynthesis.speak(utterance);
+      };
+
+      playNext();
     } catch {
       setSafeError({
         title: "Text-to-speech failed.",

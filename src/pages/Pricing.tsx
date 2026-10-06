@@ -130,7 +130,7 @@ export default function Pricing() {
               name: p.name,
               price: p.priceMonthly,
               priceCurrency: "INR",
-              url: "https://finbee.lovable.app/pricing",
+              url: "https://trackmint-ashen.vercel.app/pricing",
               category: "subscription",
             })),
           },

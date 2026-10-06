@@ -51,7 +51,7 @@ export async function openRazorpayCheckout(opts: OpenCheckoutOptions) {
       order_id: order.orderId,
       name: "TrackMint",
       description: `${order.planName} (${order.cycle})`,
-      image: "https://finbee.lovable.app/favicon.ico",
+      image: "https://trackmint-ashen.vercel.app/icons/logo.png",
       prefill: { email: opts.userEmail, name: opts.userName },
       theme: { color: "#6366f1" },
       modal: {

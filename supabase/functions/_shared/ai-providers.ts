@@ -13,7 +13,7 @@ export interface ProviderSpec {
 
 export const PROVIDERS: Record<Provider, ProviderSpec> = {
   openai:     { id: "openai",     label: "OpenAI GPT",      model: "gpt-4o-mini",                          strength: "analysis"  },
-  gemini:     { id: "gemini",     label: "Gemini",          model: "gemini-3.8-flash",                     strength: "balanced"  },
+  gemini:     { id: "gemini",     label: "Gemini",          model: "gemini-2.0-flash",                     strength: "balanced"  },
   groq:       { id: "groq",       label: "Groq",            model: "llama-3.3-70b-versatile",              strength: "speed"     },
   openrouter: { id: "openrouter", label: "OpenRouter",      model: "meta-llama/llama-3.3-70b-instruct",    strength: "reasoning" },
 };
@@ -131,7 +131,7 @@ async function callOpenRouter(messages: ChatMsg[]): Promise<CallResult> {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${key}`,
-      "HTTP-Referer": "https://finbee.lovable.app",
+      "HTTP-Referer": Deno.env.get("SITE_URL") || "https://trackmint-ashen.vercel.app",
       "X-Title": "TrackMint",
     },
     body: JSON.stringify({ model: PROVIDERS.openrouter.model, messages, stream: false }),

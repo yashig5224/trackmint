@@ -17,4 +17,4 @@ Disallow: /app
 Disallow: /onboarding
 Disallow: /billing
 
-Sitemap: https://finbee.lovable.app/sitemap.xml
+Sitemap: https://trackmint-ashen.vercel.app/sitemap.xml

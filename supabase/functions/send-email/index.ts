@@ -41,7 +41,7 @@ function renderTemplate(name: TemplateName, data: Record<string, any> = {}): { s
         subject: `Welcome to TrackMint, ${safe(data.name) || "there"}!`,
         html: `${brand}<h1 style="font-size:24px;margin:0 0 12px">Welcome aboard 🎉</h1>
 <p>Hi ${safe(data.name) || "there"}, your TrackMint account is ready. Connect your first bank statement or add a transaction to unlock Lumo, your AI financial coach.</p>
-<p><a href="${safe(data.appUrl) || "https://finbee.lovable.app"}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#6366f1;color:#fff;border-radius:10px;text-decoration:none;font-weight:600">Open TrackMint</a></p>${sign}`,
+<p><a href="${safe(data.appUrl) || "https://trackmint-ashen.vercel.app"}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#6366f1;color:#fff;border-radius:10px;text-decoration:none;font-weight:600">Open TrackMint</a></p>${sign}`,
       };
     case "verification":
       return {

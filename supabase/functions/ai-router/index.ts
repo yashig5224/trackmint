@@ -15,7 +15,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-async function resolveTier(sb: ReturnType<typeof createClient>, userId: string): Promise<PlanTier> {
+async function resolveTier(sb: ReturnType<typeof createClient>, userId: string | null): Promise<PlanTier> {
+  if (!userId) return "free";
   const { data } = await sb
     .from("subscriptions")
     .select("status, price_id, renewal_date, current_period_end")
@@ -290,15 +291,27 @@ CRITICAL RULES — Personalization Engine:
 - Reference prior coach conversations when relevant ("Last time we discussed…").
 - If the snapshot has no data, say so briefly and give specific generic guidance.
 
-OUTPUT FORMAT — strict markdown, always these four sections in this order:
+OUTPUT FORMAT — strict markdown, structured and direct:
 ## Summary
-One-paragraph plain-English read of the situation, with at least one real ₹ number.
+One-paragraph plain-English read of the situation, with real ₹ numbers whenever discussing spending, budgets, or goals.
 ## Key Findings
-- 3–5 bullets. Each bullet must cite a real number from the snapshot.
-## Recommendations
-- 3–4 concrete, prioritized actions tailored to this user's data.
-## Action Plan
-- Numbered list of 3 steps the user can do this week, with ₹ targets where possible.
+- 2–4 concise bullets citing numbers and comparisons from the user's snapshot.
+## Recommendations & Action Plan
+- Concrete prioritized steps the user can execute this week.
+
+ACTIONS & AUTOMATION:
+If the user is asking to add a transaction, budget, or goal (e.g. "Add ₹500 for coffee", "Set budget of ₹10,000 for Food", "Create emergency fund goal for ₹50,000"), include an actionable confirmation block at the very end formatted as:
+```json:action
+{"type":"create_transaction","data":{"title":"Coffee","amount":500,"category":"Food & Dining","type":"expense"}}
+```
+or
+```json:action
+{"type":"create_budget","data":{"category":"Food & Dining","monthly_limit":10000}}
+```
+or
+```json:action
+{"type":"create_goal","data":{"goal_name":"Emergency Fund","target_amount":50000}}
+```
 
 Style: use ₹ and Indian formatting (₹1,25,000). Keep under ~220 words. No emoji spam (max one tasteful emoji). Never name OpenAI/Google/Anthropic/Meta — you are Lumo AI. End with one short motivating line after the Action Plan.`;
 }
@@ -318,30 +331,34 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } },
     );
-const token = authHeader.replace("Bearer ", "");
-
-const {
-  data: { user },
-  error: authError,
-} = await sb.auth.getUser(token);
-
-if (authError || !user) {
-  console.error("Auth error:", authError);
-
-  return new Response(
-    JSON.stringify({ error: "Unauthorized" }),
-    {
-      status: 401,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
-      },
-    }
-  );
-}
-
-const userId = user.id;
     const body = await req.json().catch(() => ({} as any));
+
+    let userId: string | null = null;
+    if (authHeader.startsWith("Bearer ")) {
+      const token = authHeader.replace("Bearer ", "");
+      const {
+        data: { user },
+        error: authError,
+      } = await sb.auth.getUser(token);
+
+      if (!authError && user) {
+        userId = user.id;
+      }
+    }
+
+    // Require authentication unless demo mode is explicitly enabled
+    if (!userId && !body?.demo && !body?.ping) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        {
+          status: 401,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
 
     // Admin health ping — returns which providers have keys configured.
     if (body?.ping) {
@@ -418,22 +435,24 @@ const userId = user.id;
         const { text, usage } = await callProvider(provider, messages);
         const latency = Date.now() - started;
 
-        await Promise.all([
-          sb.from("ai_usage_logs").insert({
-            user_id: userId, provider, model: PROVIDERS[provider].model,
-            requested_model: requestedModel,
-            prompt_tokens: usage?.prompt_tokens ?? null,
-            completion_tokens: usage?.completion_tokens ?? null,
-            total_tokens: usage?.total_tokens ?? null,
-            latency_ms: latency, status: "ok", fallback_used: i > 0,
-          }),
-          sb.from("ai_history").insert({
-            user_id: userId,
-            persona: persona?.id ?? null,
-            message,
-            ai_response: text,
-          }),
-        ]);
+        if (userId) {
+          await Promise.all([
+            sb.from("ai_usage_logs").insert({
+              user_id: userId, provider, model: PROVIDERS[provider].model,
+              requested_model: requestedModel,
+              prompt_tokens: usage?.prompt_tokens ?? null,
+              completion_tokens: usage?.completion_tokens ?? null,
+              total_tokens: usage?.total_tokens ?? null,
+              latency_ms: latency, status: "ok", fallback_used: i > 0,
+            }),
+            sb.from("ai_history").insert({
+              user_id: userId,
+              persona: persona?.id ?? null,
+              message,
+              ai_response: text,
+            }),
+          ]);
+        }
 
         return new Response(JSON.stringify({
           text, provider, providerLabel: PROVIDERS[provider].label,
@@ -444,12 +463,14 @@ const userId = user.id;
         const status = e instanceof ProviderError ? e.status : 500;
         const detail = e instanceof ProviderError ? e.detail : String(e?.message ?? e);
         console.error(`provider ${provider} failed`, status, detail);
-        await sb.from("ai_usage_logs").insert({
-          user_id: userId, provider, model: PROVIDERS[provider].model,
-          requested_model: requestedModel, status: "error",
-          latency_ms: Date.now() - started, error: `${status}:${detail.slice(0, 200)}`,
-          fallback_used: i > 0,
-        });
+        if (userId) {
+          await sb.from("ai_usage_logs").insert({
+            user_id: userId, provider, model: PROVIDERS[provider].model,
+            requested_model: requestedModel, status: "error",
+            latency_ms: Date.now() - started, error: `${status}:${detail.slice(0, 200)}`,
+            fallback_used: i > 0,
+          });
+        }
         // Hard fail on rate-limit / payment — don't cascade to other paid providers
         if (status === 429 || status === 402) {
           return new Response(JSON.stringify({

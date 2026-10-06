@@ -45,6 +45,12 @@ const LOCKED_FEATURES = [
   { id: "emotion",   icon: HeartHandshake, label: "Emotional Analysis",  minTier: "elite" as PlanTier, desc: "Why you spend — not just what." },
 ];
 
+export interface ActionPayload {
+  type: "create_transaction" | "create_budget" | "create_goal";
+  data: Record<string, any>;
+  status?: "pending" | "applied" | "cancelled";
+}
+
 interface Message {
   id: number;
   role: "user" | "ai";
@@ -53,6 +59,7 @@ interface Message {
   streaming?: boolean;
   insights?: Insight[];
   chips?: string[];
+  action?: ActionPayload;
 }
 
 interface Insight {
@@ -184,13 +191,35 @@ const personaLibrary: Record<string, { keys: string[]; reply: Reply }[]> = {
   ],
 };
 
-const findReply = (msg: string, personaId: string): Reply | null => {
+const findReply = (msg: string, personaId: string): Reply => {
   const lower = msg.toLowerCase();
   const candidates = [...(personaLibrary[personaId] ?? []), ...baseLibrary];
   for (const c of candidates) {
     if (c.keys.some((k) => lower.includes(k))) return c.reply;
   }
-  return null;
+
+  // Conversational fallbacks by persona when no explicit keyword matched
+  const dynamicDefaults: Record<string, string> = {
+    student: `I'm analyzing that through your student budget. Let's make sure essentials come first, reduce discretionary dining, and aim to set aside ₹500/week to build momentum.`,
+    salary: `Looking at this from a salary-growth perspective: stick to the 50/30/20 guideline (50% needs, 30% wants, 20% savings & investments). Automating this right on payday removes temptation.`,
+    investor: `From an investment viewpoint: maintain a disciplined SIP strategy, diversify across broad-market index funds, and avoid timing the market.`,
+    hustler: `For irregular income and hustles: keep at least 3-6 months of cash reserves, allocate 25-30% for quarterly tax liabilities, and reinvest profits into your best-performing channels.`,
+    minimalist: `Cutting through the noise: simplify your accounts, eliminate recurring unused subscriptions, and focus your cash flow purely on high-utility essentials.`,
+    family: `For family financial security: prioritize comprehensive health insurance, term life coverage for earners, and an automated education corpus fund.`,
+    luxury: `Balancing lifestyle and wealth: enjoy your rewards guilt-free once your automated savings and investments are locked in each month.`,
+    crypto: `In crypto and high-volatility assets: keep total crypto exposure within 5-10% of your total net worth and hold a liquid emergency buffer in cash.`,
+  };
+
+  const defaultText = dynamicDefaults[personaId] ||
+    `I'm evaluating this against your recent finances. A great rule of thumb is keeping 50% for needs, 30% for wants, and stashing at least 20% towards savings and investments.`;
+
+  return {
+    text: defaultText,
+    insights: [
+      { label: "Recommended Savings", value: "20%", change: "Healthy baseline", positive: true },
+      { label: "Emergency Buffer", value: "3-6 mos", change: "Safety cushion", positive: true },
+    ],
+  };
 };
 
 const defaultActions = [
@@ -514,24 +543,35 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      const aiText: string =
-        data?.text ||
-        libReply?.text ||
-        `Let me think about "${text}" through your ${persona.name} lens.`;
-
-      if (data?.provider) setActiveProvider(data.provider);
-      if (data?.fallbackUsed && data?.providerLabel) {
-        toast(`Routed via ${data.providerLabel} (fallback)`, { duration: 2500 });
+      // Parse any action block from the response (e.g. ```json:action ... ```)
+      let parsedAction: ActionPayload | undefined;
+      let cleanedText = aiText;
+      const actionMatch = aiText.match(/```json:action\s*([\s\S]*?)\s*```/);
+      if (actionMatch) {
+        try {
+          const actionJson = JSON.parse(actionMatch[1]);
+          if (actionJson.type && actionJson.data) {
+            parsedAction = {
+              type: actionJson.type,
+              data: actionJson.data,
+              status: "pending",
+            };
+            cleanedText = aiText.replace(/```json:action[\s\S]*?```/, "").trim();
+          }
+        } catch (e) {
+          console.warn("Could not parse action payload", e);
+        }
       }
 
       const id = nextId.current++;
       const aiMsg: Message = {
-        id, role: "ai", text: "", fullText: aiText, streaming: true,
+        id, role: "ai", text: "", fullText: cleanedText, streaming: true,
         insights: libReply?.insights, chips: chipPool(persona.id),
+        action: parsedAction,
       };
       setIsTyping(false);
       setMessages((prev) => [...prev, aiMsg]);
-      streamInto(id, aiText);
+      streamInto(id, cleanedText);
     } catch (e: unknown) {
       console.error("ai-router error", e);
       const id = nextId.current++;
@@ -542,6 +582,59 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
         insights: libReply?.insights, chips: chipPool(persona.id),
       }]);
       streamInto(id, fallback);
+    }
+  };
+
+  const executeAction = async (msgId: number, action: ActionPayload) => {
+    if (!user) {
+      toast.error("Please log in to apply this action directly.");
+      return;
+    }
+
+    try {
+      if (action.type === "create_transaction") {
+        const { error } = await supabase.from("transactions").insert({
+          user_id: user.id,
+          title: action.data.title || "Quick expense",
+          amount: Number(action.data.amount || 0),
+          category: action.data.category || "General",
+          type: action.data.type || "expense",
+          transaction_date: new Date().toISOString().slice(0, 10),
+        });
+        if (error) throw error;
+        toast.success(`Logged ₹${action.data.amount} for ${action.data.title}!`);
+      } else if (action.type === "create_budget") {
+        const currentMonth = new Date().toISOString().slice(0, 7) + "-01";
+        const { error } = await supabase.from("budgets").insert({
+          user_id: user.id,
+          category: action.data.category || "General",
+          monthly_limit: Number(action.data.monthly_limit || 0),
+          month: currentMonth,
+        });
+        if (error) throw error;
+        toast.success(`Budget created for ${action.data.category}!`);
+      } else if (action.type === "create_goal") {
+        const { error } = await supabase.from("goals").insert({
+          user_id: user.id,
+          goal_name: action.data.goal_name || "New Savings Goal",
+          target_amount: Number(action.data.target_amount || 0),
+          current_amount: Number(action.data.current_amount || 0),
+        });
+        if (error) throw error;
+        toast.success(`Savings goal "${action.data.goal_name}" created!`);
+      }
+
+      // Mark action as applied in state
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === msgId && m.action
+            ? { ...m, action: { ...m.action, status: "applied" } }
+            : m
+        )
+      );
+    } catch (err: any) {
+      console.error("Failed to execute action", err);
+      toast.error(err.message || "Could not apply action");
     }
   };
 
@@ -858,6 +951,70 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
                           </div>
                         )}
                       </div>
+
+                      {/* Interactive Action Card */}
+                      {!msg.streaming && msg.action && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.96 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="p-5 rounded-2xl bg-gradient-to-r from-indigo-50 via-violet-50 to-sky-50 border border-indigo-200 shadow-sm"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="w-4 h-4 text-indigo-600" />
+                              <span className="text-xs font-bold uppercase tracking-wider text-indigo-900">
+                                {msg.action.type === "create_transaction" ? "Log Expense" :
+                                 msg.action.type === "create_budget" ? "Create Budget" : "New Goal"}
+                              </span>
+                            </div>
+                            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                              msg.action.status === "applied"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-indigo-100 text-indigo-800"
+                            }`}>
+                              {msg.action.status === "applied" ? "✓ Applied" : "Pending Confirmation"}
+                            </span>
+                          </div>
+
+                          <div className="text-sm text-slate-700 mb-4 font-medium">
+                            {msg.action.type === "create_transaction" && (
+                              <p>Add <strong>₹{msg.action.data.amount}</strong> for <strong>{msg.action.data.title}</strong> ({msg.action.data.category || "General"})</p>
+                            )}
+                            {msg.action.type === "create_budget" && (
+                              <p>Set a monthly limit of <strong>₹{msg.action.data.monthly_limit}</strong> for <strong>{msg.action.data.category}</strong></p>
+                            )}
+                            {msg.action.type === "create_goal" && (
+                              <p>Create savings goal <strong>{msg.action.data.goal_name}</strong> with target <strong>₹{msg.action.data.target_amount}</strong></p>
+                            )}
+                          </div>
+
+                          {msg.action.status !== "applied" && (
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => executeAction(msg.id, msg.action!)}
+                                className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition-colors"
+                              >
+                                Confirm & Apply
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setMessages((prev) =>
+                                    prev.map((m) =>
+                                      m.id === msg.id && m.action
+                                        ? { ...m, action: { ...m.action, status: "cancelled" } }
+                                        : m
+                                    )
+                                  );
+                                  toast("Action cancelled");
+                                }}
+                                className="px-3 py-2 rounded-xl text-xs font-medium bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors"
+                              >
+                                Dismiss
+                              </button>
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
 
                       {/* Follow-up suggestion chips */}
                       {!msg.streaming && msg.chips && msg.chips.length > 0 && (
