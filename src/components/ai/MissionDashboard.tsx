@@ -543,7 +543,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      // Parse any action block from the response (e.g. ```json:action ... ```)
+      const aiText = data?.text || libReply?.text || "Here is your financial update.";
       let parsedAction: ActionPayload | undefined;
       let cleanedText = aiText;
       const actionMatch = aiText.match(/```json:action\s*([\s\S]*?)\s*```/);
