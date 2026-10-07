@@ -272,9 +272,9 @@ function renderSnapshot(s: FinancialSnapshot): string {
 function buildSystem(provider: Provider, persona: { id?: string; name?: string }, snapshot: string): string {
   const personaName = persona?.name ?? "Personal Finance";
   const styleByProvider: Record<Provider, string> = {
-    openai:     "deeply analytical, nuanced, wealth-strategist level",
-    gemini:     "warm, direct, empowering, mathematically grounded",
-    groq:       "fast, sharp, high-signal, no fluff",
+    openai: "deeply analytical, nuanced, wealth-strategist level",
+    gemini: "warm, direct, empowering, mathematically grounded",
+    groq: "fast, sharp, high-signal, no fluff",
     openrouter: "systematic, scenario-driven, step-by-step logical",
   };
 
