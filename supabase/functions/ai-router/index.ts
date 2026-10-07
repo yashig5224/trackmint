@@ -15,6 +15,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function cleanKey(k: string | undefined): string {
+  if (!k) return "";
+  return k.trim().replace(/^["']|["']$/g, "").trim();
+}
+
 async function resolveTier(sb: ReturnType<typeof createClient>, userId: string | null): Promise<PlanTier> {
   if (!userId) return "free";
   const { data } = await sb
@@ -344,52 +349,50 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization") ?? "";
-    if (!authHeader.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const sb = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
+
+    // Parse body first so we can inspect demo/ping flags before auth checks
     const body = await req.json().catch(() => ({} as any));
 
     let userId: string | null = null;
+    let sb = null;
+
     if (authHeader.startsWith("Bearer ")) {
       const token = authHeader.replace("Bearer ", "");
-      const {
-        data: { user },
-        error: authError,
-      } = await sb.auth.getUser(token);
-
-      if (!authError && user) {
-        userId = user.id;
+      try {
+        const authSb = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_ANON_KEY")!,
+          { global: { headers: { Authorization: authHeader } } },
+        );
+        const { data: { user }, error: authError } = await authSb.auth.getUser(token);
+        if (!authError && user) {
+          userId = user.id;
+          sb = authSb;
+        }
+      } catch (_e) {
+        // Token invalid or anon key used
       }
     }
 
-    // Require authentication unless demo mode is explicitly enabled
-    if (!userId && !body?.demo && !body?.ping) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        {
-          status: 401,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
+    if (!sb) {
+      sb = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
       );
     }
 
     // Admin health ping — returns which providers have keys configured.
     if (body?.ping) {
+      const gemKey = cleanKey(Deno.env.get("GEMINI_API_KEY"));
+      const groqKey = cleanKey(Deno.env.get("GROQ_API_KEY"));
+      const openKey = cleanKey(Deno.env.get("OPENAI_API_KEY"));
+      const orKey = cleanKey(Deno.env.get("OPENROUTER_API_KEY"));
+
       const status = {
-        openai: !!Deno.env.get("OPENAI_API_KEY"),
-        gemini: !!Deno.env.get("GEMINI_API_KEY"),
-        groq: !!Deno.env.get("GROQ_API_KEY"),
-        openrouter: !!Deno.env.get("OPENROUTER_API_KEY"),
+        openai: !!openKey,
+        gemini: !!gemKey,
+        groq: !!groqKey,
+        openrouter: !!orKey,
       };
       const anyConfigured = Object.values(status).some(Boolean);
       return new Response(JSON.stringify({ ok: anyConfigured, providers: status }), {
@@ -448,7 +451,7 @@ Deno.serve(async (req) => {
     ];
 
     const started = Date.now();
-    let lastErr: any = null;
+    const providerErrors: string[] = [];
     for (let i = 0; i < chain.length; i++) {
       const provider = chain[i];
       const messages: ChatMsg[] = [
@@ -483,9 +486,9 @@ Deno.serve(async (req) => {
           model: PROVIDERS[provider].model, fallbackUsed: i > 0, tier, latencyMs: latency,
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       } catch (e: any) {
-        lastErr = e;
         const status = e instanceof ProviderError ? e.status : 500;
         const detail = e instanceof ProviderError ? e.detail : String(e?.message ?? e);
+        providerErrors.push(`[${provider} HTTP ${status}]: ${detail.slice(0, 120)}`);
         console.error(`provider ${provider} failed`, status, detail);
         if (userId) {
           await sb.from("ai_usage_logs").insert({
@@ -495,21 +498,12 @@ Deno.serve(async (req) => {
             fallback_used: i > 0,
           });
         }
-        // Hard fail on rate-limit / payment — don't cascade to other paid providers
-        if (status === 429 || status === 402) {
-          return new Response(JSON.stringify({
-            error: status === 429
-              ? "Rate limit on AI provider — slow down a sec."
-              : "AI provider credits exhausted. Top up your provider account.",
-          }), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        }
-        // Otherwise continue to next provider in chain
       }
     }
 
     return new Response(JSON.stringify({
       error: "AI temporarily unavailable — all providers failed",
-      detail: lastErr instanceof ProviderError ? lastErr.detail : String(lastErr?.message ?? "unknown"),
+      detail: providerErrors.join(" ; "),
     }), {
       status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

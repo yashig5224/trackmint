@@ -191,14 +191,16 @@ const personaLibrary: Record<string, { keys: string[]; reply: Reply }[]> = {
   ],
 };
 
-const findReply = (msg: string, personaId: string): Reply => {
+const matchLibrary = (msg: string, personaId: string): Reply | null => {
   const lower = msg.toLowerCase();
   const candidates = [...(personaLibrary[personaId] ?? []), ...baseLibrary];
   for (const c of candidates) {
     if (c.keys.some((k) => lower.includes(k))) return c.reply;
   }
+  return null;
+};
 
-  // Conversational fallbacks by persona when no explicit keyword matched
+const getFallbackReply = (personaId: string): Reply => {
   const dynamicDefaults: Record<string, string> = {
     student: `I'm analyzing that through your student budget. Let's make sure essentials come first, reduce discretionary dining, and aim to set aside ₹500/week to build momentum.`,
     salary: `Looking at this from a salary-growth perspective: stick to the 50/30/20 guideline (50% needs, 30% wants, 20% savings & investments). Automating this right on payday removes temptation.`,
@@ -220,6 +222,10 @@ const findReply = (msg: string, personaId: string): Reply => {
       { label: "Emergency Buffer", value: "3-6 mos", change: "Safety cushion", positive: true },
     ],
   };
+};
+
+const findReply = (msg: string, personaId: string): Reply => {
+  return matchLibrary(msg, personaId) ?? getFallbackReply(personaId);
 };
 
 const defaultActions = [
@@ -493,18 +499,44 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
     requestAnimationFrame(tick);
   };
 
-  const chipPool = (personaId: string): string[] => {
-    const pool: Record<string, string[]> = {
-      student:    ["Create a weekly food budget", "Find ₹500 I can save", "Track hostel spend"],
-      salary:     ["Automate my savings", "Plan emergency fund", "Lower my EMIs"],
-      investor:   ["Rebalance my portfolio", "Suggest a SIP", "Risk-check my stocks"],
-      hustler:    ["Forecast next month", "Estimate my taxes", "Smooth cash flow"],
-      minimalist: ["Cut 3 expenses", "Essentials-only plan", "Quiet money habits"],
-      family:     ["Plan kids' education", "Family insurance check", "Shared budget"],
-      luxury:     ["Travel budget planner", "Smart luxury swaps", "Reward optimization"],
-      crypto:     ["Allocation tips", "Stablecoin strategy", "Tax on crypto gains"],
+  const chipPool = (personaId: string, turn = 0): string[] => {
+    const pool: Record<string, string[][]> = {
+      student: [
+        ["Analyze my food spend", "Find ₹500 I can save", "Track hostel spend"],
+        ["Suggest a student SIP", "How to budget pocket money", "Cut discretionary dining"],
+        ["Emergency fund for students", "Part-time income tips", "Best student hacks"],
+      ],
+      salary: [
+        ["Automate my savings", "Plan emergency fund", "Lower my EMIs"],
+        ["50/30/20 rule breakdown", "Tax saving ideas (80C)", "Annual bonus strategy"],
+      ],
+      investor: [
+        ["Rebalance my portfolio", "Suggest a SIP", "Risk-check my stocks"],
+        ["Index funds vs Mutual funds", "Gold vs Equity ratio", "Market dip strategy"],
+      ],
+      hustler: [
+        ["Forecast next month", "Estimate my taxes", "Smooth cash flow"],
+        ["Separate business & personal", "Freelance emergency buffer", "Invoice follow-ups"],
+      ],
+      minimalist: [
+        ["Cut 3 expenses", "Essentials-only plan", "Quiet money habits"],
+        ["Audit recurring subs", "No-spend weekend challenge", "Frugal lifestyle hacks"],
+      ],
+      family: [
+        ["Plan kids' education", "Family insurance check", "Shared budget"],
+        ["Term life insurance check", "Home loan prepay strategy", "Family medical buffer"],
+      ],
+      luxury: [
+        ["Travel budget planner", "Smart luxury swaps", "Reward optimization"],
+        ["Credit card air miles check", "Guilt-free splurge fund", "Lifestyle inflation guard"],
+      ],
+      crypto: [
+        ["Allocation tips", "Stablecoin strategy", "Tax on crypto gains"],
+        ["Cold storage best practice", "DCA vs lump sum", "Risk buffer balance"],
+      ],
     };
-    return pool[personaId] ?? ["Analyze my spending", "Create a budget plan", "How can I save more?"];
+    const sets = pool[personaId] ?? [["Analyze my spending", "Create a budget plan", "How can I save more?"]];
+    return sets[turn % sets.length];
   };
 
   // Provider used for the most recent / in-flight AI response.
@@ -527,7 +559,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
     setIsTyping(true);
     setActiveProvider(selectedModel);
 
-    const libReply = findReply(text, persona.id);
+    const matchedLib = matchLibrary(text, persona.id);
 
     try {
       const { data, error } = await supabase.functions.invoke("ai-router", {
@@ -543,7 +575,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      const aiText = data?.text || libReply?.text || "Here is your financial update.";
+      const aiText = data?.text || matchedLib?.text || "Here is your financial update.";
       let parsedAction: ActionPayload | undefined;
       let cleanedText = aiText;
       const actionMatch = aiText.match(/```json:action\s*([\s\S]*?)\s*```/);
@@ -566,7 +598,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
       const id = nextId.current++;
       const aiMsg: Message = {
         id, role: "ai", text: "", fullText: cleanedText, streaming: true,
-        insights: libReply?.insights, chips: chipPool(persona.id),
+        insights: matchedLib?.insights, chips: chipPool(persona.id, history.length),
         action: parsedAction,
       };
       setIsTyping(false);
@@ -574,14 +606,14 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
       streamInto(id, cleanedText);
     } catch (e: unknown) {
       console.error("ai-router error", e);
+      const fallback = getFallbackReply(persona.id);
       const id = nextId.current++;
-      const fallback = libReply?.text ?? "I hit a hiccup reaching the AI engines. Try again in a moment.";
       setIsTyping(false);
       setMessages((prev) => [...prev, {
-        id, role: "ai", text: "", fullText: fallback, streaming: true,
-        insights: libReply?.insights, chips: chipPool(persona.id),
+        id, role: "ai", text: "", fullText: fallback.text, streaming: true,
+        insights: fallback.insights, chips: chipPool(persona.id, history.length),
       }]);
-      streamInto(id, fallback);
+      streamInto(id, fallback.text);
     }
   };
 
