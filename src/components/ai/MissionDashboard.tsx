@@ -1,14 +1,20 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart, Bar, ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
-import { Mic, Send, LogOut, Settings, Sparkles, TrendingUp, AlertTriangle, Target, Copy, RotateCcw, ThumbsUp, ThumbsDown, Bookmark, Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeftOpen, Pin, Lock, Crown, Zap, Brain, Mic2, FileDown, LineChart as LineChartIcon, HeartHandshake, ChevronDown, Check, BookOpen, Database } from "lucide-react";
+import {
+  Mic, LogOut, Settings, Sparkles, TrendingUp, AlertTriangle, Target,
+  Copy, RotateCcw, ThumbsUp, ThumbsDown, Bookmark, Plus, MessageSquare,
+  Trash2, PanelLeftClose, PanelLeftOpen, Pin, Lock, Crown, Zap, Brain,
+  Mic2, FileDown, LineChart as LineChartIcon, HeartHandshake, ChevronDown,
+  Check, BookOpen, Database, X, Share2, Sparkle
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Persona } from "./PersonaSelection";
-import { lumoAvatar, coachBg } from "@/assets/personas";
+import { lumoAvatar } from "@/assets/personas";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useSubscription, type PlanTier } from "@/hooks/useSubscription";
@@ -18,32 +24,27 @@ import { DEMO_TRANSACTIONS, DEMO_GOALS, DEMO_PROFILE } from "@/lib/demoData";
 import { UpgradeModal } from "@/components/payments/UpgradeModal";
 import { getAiUsage, consumeAiUsage, FREE_DAILY_LIMIT } from "@/lib/aiUsage";
 import LumoVoiceMode from "./LumoVoiceMode";
+import { PromptInput } from "@/components/ui/ai-chat-input";
 
 // ─── Plan-gated AI model catalog ─────────────────────────────────────────────
 interface AiModelOption {
   id: string;
   label: string;
-  vendor: "Lumo" | "GPT" | "Gemini" | "Claude";
+  vendor: "Lumo" | "GPT" | "Gemini" | "Claude" | "Groq" | "DeepSeek";
   specialty: string;
   speed: string;
   minTier: PlanTier;
 }
-const AI_MODELS: AiModelOption[] = [
-  { id: "lumo",     label: "Lumo Core",     vendor: "Lumo",   specialty: "Balanced",      speed: "Fast",     minTier: "free"  },
-  { id: "gpt",      label: "GPT-class",     vendor: "GPT",    specialty: "Reasoning",     speed: "Medium",   minTier: "pro"   },
-  { id: "gemini",   label: "Gemini Pro",    vendor: "Gemini", specialty: "Speed",         speed: "Ultra",    minTier: "pro"   },
-  { id: "claude",   label: "Claude Sonnet", vendor: "Claude", specialty: "Deep analysis", speed: "Medium",   minTier: "elite" },
-];
-const tierRank: Record<PlanTier, number> = { free: 0, pro: 1, elite: 2 };
 
-const LOCKED_FEATURES = [
-  { id: "voice",     icon: Mic2,           label: "Voice AI Coach",      minTier: "pro"   as PlanTier, desc: "Talk to Lumo and get spoken replies." },
-  { id: "forecast",  icon: LineChartIcon,  label: "AI Forecasting",      minTier: "pro"   as PlanTier, desc: "Predict next month's spend & savings." },
-  { id: "memory",    icon: Brain,          label: "AI Memory",           minTier: "pro"   as PlanTier, desc: "Lumo remembers your goals & habits." },
-  { id: "pdf",       icon: FileDown,       label: "PDF Reports",         minTier: "pro"   as PlanTier, desc: "Export investor-grade summaries." },
-  { id: "wealth",    icon: Crown,          label: "Wealth Simulations",  minTier: "elite" as PlanTier, desc: "Project your wealth across decades." },
-  { id: "emotion",   icon: HeartHandshake, label: "Emotional Analysis",  minTier: "elite" as PlanTier, desc: "Why you spend — not just what." },
+const AI_MODELS: AiModelOption[] = [
+  { id: "lumo",       label: "Lumo Smart",    vendor: "Lumo",     specialty: "Smart Hybrid Router", speed: "Sub-sec", minTier: "free"  },
+  { id: "openai",     label: "GPT-4o",        vendor: "GPT",      specialty: "Nuanced Reasoning",   speed: "Fast",    minTier: "pro"   },
+  { id: "gemini",     label: "Gemini 2.5",    vendor: "Gemini",   specialty: "Budget Analytics",    speed: "Ultra",   minTier: "pro"   },
+  { id: "groq",       label: "Llama 3.3 70B", vendor: "Groq",     specialty: "Zero-Latency Stream", speed: "Instant", minTier: "free"  },
+  { id: "openrouter", label: "DeepSeek R1",   vendor: "DeepSeek", specialty: "Scenario Modeling",   speed: "Deep",    minTier: "elite" },
 ];
+
+const tierRank: Record<PlanTier, number> = { free: 0, pro: 1, elite: 2 };
 
 export interface ActionPayload {
   type: "create_transaction" | "create_budget" | "create_goal";
@@ -64,12 +65,13 @@ interface Message {
   id: number;
   role: "user" | "ai";
   text: string;
-  fullText?: string;       // target text while streaming
+  fullText?: string;
   streaming?: boolean;
   insights?: Insight[];
   chips?: string[];
   action?: ActionPayload;
   sources?: RetrievedSource[];
+  createdAt?: string;
 }
 
 interface Insight {
@@ -80,17 +82,16 @@ interface Insight {
   chartData?: { name: string; value: number }[];
 }
 
-// Persona-aware response library. Keyword-matched against the user message.
 type Reply = { text: string; insights: Insight[] };
 
 const baseLibrary: { keys: string[]; reply: Reply }[] = [
   {
     keys: ["spend", "spending", "analyze", "expenses"],
     reply: {
-      text: "I scanned your last 30 days. Overall you're trending well — but dining out is creeping above your usual baseline. A small 10% trim would compound nicely.",
+      text: "I analyzed your logged spending. Your major categories are clearly visible — food and discretionary dining are key areas where a small weekly cap frees up substantial compound savings.",
       insights: [
-        { label: "Saved this week", value: "₹2,400", change: "+12% vs last week", positive: true },
-        { label: "Food spending", value: "₹4,800", change: "22% above budget", positive: false, chartData: [{ name: "Budget", value: 4000 }, { name: "Spent", value: 4800 }] },
+        { label: "Weekly save target", value: "₹500", change: "+12% momentum", positive: true },
+        { label: "Food spending", value: "₹1,746", change: "Top logged category", positive: false, chartData: [{ name: "Food", value: 1746 }, { name: "Other", value: 1729 }] },
       ],
     },
   },
@@ -99,49 +100,8 @@ const baseLibrary: { keys: string[]; reply: Reply }[] = [
     reply: {
       text: "Let's structure a balanced budget using the 50/30/20 rule. Based on your income, here's a clean monthly allocation.",
       insights: [
-        { label: "Needs", value: "50%", change: "₹27,500" },
-        { label: "Wants", value: "30%", change: "₹16,500" },
-        { label: "Savings", value: "20%", change: "₹11,000", positive: true, chartData: [{ name: "Needs", value: 50 }, { name: "Wants", value: 30 }, { name: "Savings", value: 20 }] },
-      ],
-    },
-  },
-  {
-    keys: ["waste", "subscription", "unused", "cancel"],
-    reply: {
-      text: "I found 3 subscriptions with no usage in the past 30 days. Cancelling these would save you ₹13,800 annually.",
-      insights: [
-        { label: "Active Subs", value: "8", change: "₹2,840/mo" },
-        { label: "Unused Subs", value: "3", change: "Save ₹1,150/mo", positive: true, chartData: [{ name: "Active", value: 5 }, { name: "Unused", value: 3 }] },
-      ],
-    },
-  },
-  {
-    keys: ["goal", "save more", "emergency", "target"],
-    reply: {
-      text: "Your goals are on track. At this pace you'll hit your Emergency Fund 2 months early. Want me to redirect ₹2,000/mo to your next goal?",
-      insights: [
-        { label: "Goal progress", value: "68%", change: "Emergency Fund", positive: true, chartData: [{ name: "Done", value: 68 }, { name: "Left", value: 32 }] },
-        { label: "Est. Completion", value: "Aug 2026", change: "2 months early!", positive: true },
-      ],
-    },
-  },
-  {
-    keys: ["invest", "sip", "portfolio", "stock", "mutual"],
-    reply: {
-      text: "Your portfolio leans 70% equity / 20% debt / 10% cash. For your risk profile, a small rebalance toward index funds will smooth volatility.",
-      insights: [
-        { label: "Equity", value: "70%", change: "+3% MoM", positive: true, chartData: [{ name: "Eq", value: 70 }, { name: "Debt", value: 20 }, { name: "Cash", value: 10 }] },
-        { label: "Suggested SIP", value: "₹8,000", change: "Index fund", positive: true },
-      ],
-    },
-  },
-  {
-    keys: ["tax", "income tax", "deduction"],
-    reply: {
-      text: "You can still claim ₹62,000 in deductions this year via 80C + NPS. Want a step-by-step filing checklist?",
-      insights: [
-        { label: "80C used", value: "₹88,000", change: "of ₹1.5L" },
-        { label: "Potential save", value: "₹19,400", change: "If maxed", positive: true },
+        { label: "Needs (50%)", value: "₹2,500", change: "Core essentials", positive: true },
+        { label: "Wants (30%)", value: "₹1,500", change: "Discretionary", positive: true },
       ],
     },
   },
@@ -149,54 +109,18 @@ const baseLibrary: { keys: string[]; reply: Reply }[] = [
 
 const personaLibrary: Record<string, { keys: string[]; reply: Reply }[]> = {
   student: [
-    { keys: ["college", "hostel", "pocket"], reply: { text: "Here's a lean student plan: keep mess + essentials under ₹4,500, cap outings at ₹1,500, and stash ₹500 weekly. Tiny, but it compounds.", insights: [
+    { keys: ["college", "hostel", "pocket"], reply: { text: "Here's a lean student plan: keep mess + essentials under ₹3,000, cap outings at ₹1,000, and stash ₹500 weekly into savings.", insights: [
       { label: "Weekly save target", value: "₹500", change: "Doable", positive: true },
-      { label: "Monthly buffer", value: "₹2,000", change: "Auto-transfer", positive: true, chartData: [{ name: "Saved", value: 2000 }, { name: "Spent", value: 4500 }] },
+      { label: "Monthly buffer", value: "₹2,000", change: "Auto-transfer", positive: true, chartData: [{ name: "Saved", value: 2000 }, { name: "Spent", value: 3000 }] },
     ] } },
-    { keys: ["food", "mess", "eating"], reply: { text: "Food is your biggest swing category. Try a 5-day mess plan + 2 outings cap. You'd save around ₹1,800/mo.", insights: [
-      { label: "Food now", value: "₹6,300", change: "Above target", positive: false, chartData: [{ name: "Now", value: 6300 }, { name: "Target", value: 4500 }] },
+    { keys: ["food", "mess", "eating"], reply: { text: "Food is your biggest swing category. Tracking small snacks and cooking 2 meals at home easily recovers ₹800–₹1,200/mo.", insights: [
+      { label: "Food logged", value: "₹1,746", change: "25% of spend", positive: false, chartData: [{ name: "Food", value: 1746 }, { name: "Other", value: 1729 }] },
     ] } },
   ],
   salary: [
     { keys: ["salary", "optimize", "paycheck"], reply: { text: "Automate the moment salary lands: 20% to investments, 10% to emergency, then spend the rest guilt-free.", insights: [
       { label: "Auto-save", value: "20%", change: "₹11,000/mo", positive: true },
-      { label: "Emergency", value: "10%", change: "₹5,500/mo", positive: true, chartData: [{ name: "Invest", value: 20 }, { name: "Emerg", value: 10 }, { name: "Live", value: 70 }] },
-    ] } },
-    { keys: ["emi", "loan", "debt"], reply: { text: "Your EMIs eat 28% of take-home. Refinancing your personal loan could drop it to 22% — frees up ₹3,300/mo.", insights: [
-      { label: "EMI share", value: "28%", change: "Slightly high", positive: false },
-      { label: "After refi", value: "22%", change: "Free ₹3,300", positive: true },
-    ] } },
-  ],
-  investor: [
-    { keys: ["risk", "rebalance", "allocation"], reply: { text: "Risk-adjusted, you're slightly overweight on small caps. Trim 5%, rotate into large-cap index, and your Sharpe ratio improves.", insights: [
-      { label: "Sharpe", value: "1.1", change: "→ 1.3 projected", positive: true, chartData: [{ name: "Lg", value: 45 }, { name: "Mid", value: 25 }, { name: "Sm", value: 30 }] },
-    ] } },
-  ],
-  hustler: [
-    { keys: ["freelance", "client", "revenue", "income"], reply: { text: "Across your 3 income streams, freelance is volatile. Set aside 30% of every payout for taxes + lean months.", insights: [
-      { label: "Streams", value: "3", change: "₹84k avg/mo", positive: true, chartData: [{ name: "Free", value: 50 }, { name: "Side", value: 30 }, { name: "Affil", value: 20 }] },
-      { label: "Tax buffer", value: "30%", change: "Auto-allocate", positive: true },
-    ] } },
-  ],
-  minimalist: [
-    { keys: ["simplify", "essentials", "cut"], reply: { text: "Pared down: 3 categories cover 92% of your needs. Everything else is optional — and that's freedom.", insights: [
-      { label: "Core spend", value: "₹18,400", change: "92% of life", positive: true, chartData: [{ name: "Core", value: 92 }, { name: "Extra", value: 8 }] },
-    ] } },
-  ],
-  family: [
-    { keys: ["kid", "child", "education", "school"], reply: { text: "For a ₹15L education corpus in 12 years, start a ₹6,200/mo SIP at 11% expected returns. Locked in, stress-free.", insights: [
-      { label: "Monthly SIP", value: "₹6,200", change: "12-yr horizon", positive: true },
-      { label: "Target", value: "₹15L", change: "Education", positive: true, chartData: [{ name: "Need", value: 100 }] },
-    ] } },
-  ],
-  luxury: [
-    { keys: ["travel", "luxury", "lifestyle"], reply: { text: "Your luxury budget is healthy. One smart swap: book international trips 90 days out — same experience, ~22% cheaper.", insights: [
-      { label: "Smart swap", value: "22%", change: "Per trip", positive: true },
-    ] } },
-  ],
-  crypto: [
-    { keys: ["crypto", "btc", "eth", "defi", "stable"], reply: { text: "Your crypto allocation is 18% of net worth — at the upper edge. Consider rotating 5% into stablecoin yield to cushion volatility.", insights: [
-      { label: "Crypto share", value: "18%", change: "High vol", positive: false, chartData: [{ name: "BTC", value: 50 }, { name: "ETH", value: 30 }, { name: "Alt", value: 20 }] },
+      { label: "Emergency", value: "10%", change: "₹5,500/mo", positive: true },
     ] } },
   ],
 };
@@ -211,22 +135,8 @@ const matchLibrary = (msg: string, personaId: string): Reply | null => {
 };
 
 const getFallbackReply = (personaId: string): Reply => {
-  const dynamicDefaults: Record<string, string> = {
-    student: `I'm analyzing that through your student budget. Let's make sure essentials come first, reduce discretionary dining, and aim to set aside ₹500/week to build momentum.`,
-    salary: `Looking at this from a salary-growth perspective: stick to the 50/30/20 guideline (50% needs, 30% wants, 20% savings & investments). Automating this right on payday removes temptation.`,
-    investor: `From an investment viewpoint: maintain a disciplined SIP strategy, diversify across broad-market index funds, and avoid timing the market.`,
-    hustler: `For irregular income and hustles: keep at least 3-6 months of cash reserves, allocate 25-30% for quarterly tax liabilities, and reinvest profits into your best-performing channels.`,
-    minimalist: `Cutting through the noise: simplify your accounts, eliminate recurring unused subscriptions, and focus your cash flow purely on high-utility essentials.`,
-    family: `For family financial security: prioritize comprehensive health insurance, term life coverage for earners, and an automated education corpus fund.`,
-    luxury: `Balancing lifestyle and wealth: enjoy your rewards guilt-free once your automated savings and investments are locked in each month.`,
-    crypto: `In crypto and high-volatility assets: keep total crypto exposure within 5-10% of your total net worth and hold a liquid emergency buffer in cash.`,
-  };
-
-  const defaultText = dynamicDefaults[personaId] ||
-    `I'm evaluating this against your recent finances. A great rule of thumb is keeping 50% for needs, 30% for wants, and stashing at least 20% towards savings and investments.`;
-
   return {
-    text: defaultText,
+    text: "I've reviewed your financial profile and transaction log. Setting a concrete weekly cap and directing at least 15-20% into your active goals will rapidly build cash flow stability.",
     insights: [
       { label: "Recommended Savings", value: "20%", change: "Healthy baseline", positive: true },
       { label: "Emergency Buffer", value: "3-6 mos", change: "Safety cushion", positive: true },
@@ -234,66 +144,24 @@ const getFallbackReply = (personaId: string): Reply => {
   };
 };
 
-const findReply = (msg: string, personaId: string): Reply => {
-  return matchLibrary(msg, personaId) ?? getFallbackReply(personaId);
-};
-
 const defaultActions = [
-  "Analyze my spending",
-  "Create a budget",
-  "Detect waste",
-  "Save more money",
-  "Goal planning",
+  "How am I doing financially?",
+  "How much have I spent in last 6 months?",
+  "Find ₹500 I can save this week",
+  "Analyze my food spend",
+  "Create a 50/30/20 budget",
 ];
 
 const personaPrompts: Record<string, string[]> = {
-  student:    ["Create my student budget", "Reduce food expenses", "Track hostel spending", "Save ₹500 this week"],
-  salary:     ["Optimize my salary", "Automate my savings", "Plan an emergency fund", "Lower my EMIs"],
-  investor:   ["Review my portfolio", "Suggest a SIP", "Risk-check my stocks", "Rebalance ideas"],
-  hustler:    ["Track freelance income", "Estimate my taxes", "Forecast monthly revenue", "Cashflow tips"],
-  minimalist: ["Simplify my budget", "Cut 3 expenses", "Essentials-only plan", "Quiet money habits"],
-  family:     ["Plan for kids' education", "Family insurance check", "Shared monthly budget", "Emergency fund target"],
-  luxury:     ["Smart luxury swaps", "Travel budget planner", "Reward optimization", "Wealth + lifestyle balance"],
-  crypto:     ["Crypto allocation tips", "DeFi risk check", "Stablecoin strategy", "Tax on crypto gains"],
+  student:    ["How am I doing financially?", "How much have I spent in last 6 months?", "Analyze my food spend", "Find ₹500 I can save", "Track hostel spending"],
+  salary:     ["Optimize my monthly paycheck", "How much have I saved this year?", "Plan emergency fund", "Lower my EMIs", "Tax-saving ideas"],
+  investor:   ["Review my asset allocation", "Index funds vs Mutual funds", "Suggest a SIP strategy", "Market dip preparation"],
+  hustler:    ["Forecast next month's cash flow", "Estimate my quarterly taxes", "Smooth irregular income", "Emergency buffer"],
+  minimalist: ["Audit my recurring subscriptions", "Cut 3 non-essential habits", "Quiet wealth blueprint", "30-day no-spend test"],
+  family:     ["Family medical buffer check", "Plan education fund", "Term life insurance calculation", "Shared household budget"],
+  luxury:     ["Smart travel swaps without downgrade", "Reward point optimization", "Splurge fund blueprint"],
+  crypto:     ["Crypto allocation safety limit", "Stablecoin yield buffer", "Taxation on crypto transfers"],
 };
-
-const CHART_COLORS = [
-  "hsl(38, 92%, 50%)",
-  "hsl(262, 83%, 58%)",
-  "hsl(330, 81%, 60%)",
-  "hsl(217, 91%, 60%)",
-  "hsl(152, 69%, 41%)",
-];
-
-const AnimatedValue = ({ value }: { value: string }) => {
-  const numMatch = value.match(/(₹?)([\d,]+\.?\d*)(.*)/);
-  const [displayed, setDisplayed] = useState(value);
-
-  useEffect(() => {
-    if (!numMatch) { setDisplayed(value); return; }
-    const prefix = numMatch[1];
-    const targetNum = parseFloat(numMatch[2].replace(/,/g, ""));
-    const suffix = numMatch[3];
-    const duration = 1000;
-    const startTime = performance.now();
-    const animate = (now: number) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      const current = Math.round(targetNum * eased);
-      setDisplayed(`${prefix}${current.toLocaleString()}${suffix}`);
-      if (progress < 1) requestAnimationFrame(animate);
-    };
-    requestAnimationFrame(animate);
-  }, [value]);
-
-  return <span>{displayed}</span>;
-};
-
-interface MissionDashboardProps {
-  persona: Persona;
-  onBack: () => void;
-}
 
 interface Thread {
   id: string;
@@ -318,26 +186,34 @@ const loadThreads = (): Thread[] => {
 const saveThreads = (t: Thread[]) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(t));
-  } catch {
-    // Thread persistence is best-effort; chat still works if storage is unavailable.
-  }
+  } catch {}
 };
 
 const autoTitle = (msg: string) => {
   const cleaned = msg.replace(/[^\w\s₹.,?-]/g, "").trim();
-  const words = cleaned.split(/\s+/).slice(0, 6).join(" ");
-  return (words.length > 44 ? words.slice(0, 44) + "…" : words) || "New Chat";
+  const words = cleaned.split(/\s+/).slice(0, 5).join(" ");
+  return (words.length > 36 ? words.slice(0, 36) + "…" : words) || "Financial Chat";
 };
 
+interface MissionDashboardProps {
+  persona: Persona;
+  onBack: () => void;
+}
+
 const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
-  const accentColor = `hsl(${persona.accentHsl})`;
   const navigate = useNavigate();
   const { user } = useAuth();
   const { tier, isPro, isElite } = useSubscription();
   const { isDemo } = useDemoMode();
 
-  // Demo-mode snapshot — sent to ai-router so Lumo answers with realistic
-  // sample finances when no auth token is present.
+  // Responsive state for mobile drawer
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== "undefined" ? window.innerWidth < 768 : false));
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   const demoContext = useMemo(() => {
     if (!isDemo) return undefined;
     const monthAgo = new Date(); monthAgo.setDate(monthAgo.getDate() - 30);
@@ -357,12 +233,12 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
     };
   }, [isDemo]);
 
-  // ── Plan-aware AI usage limiter (free only) ───────────────────────────────
+  // Usage state
   const [usage, setUsage] = useState(() => getAiUsage());
   const refreshUsage = () => setUsage(getAiUsage());
   const limitReached = tier === "free" && usage.remaining <= 0;
 
-  // ── Upgrade modal ─────────────────────────────────────────────────────────
+  // Upgrade modal
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeTier, setUpgradeTier] = useState<"pro" | "elite">("pro");
   const [upgradeFeature, setUpgradeFeature] = useState<string | undefined>();
@@ -371,17 +247,16 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
     setUpgradeTier(t); setUpgradeFeature(feature); setUpgradeOpen(true);
   };
 
-  // ── AI model selector (plan-gated) ────────────────────────────────────────
+  // Model selection
   const [selectedModel, setSelectedModel] = useState<string>("lumo");
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const activeModel = AI_MODELS.find((m) => m.id === selectedModel) ?? AI_MODELS[0];
 
-
-
   const greetingMsg = (): Message => ({
     id: 0,
     role: "ai",
-    text: `Hey, I'm Lumo AI ✨ — your ${persona.name} coach. I've scanned your recent transactions and I'm ready to help. What should we tackle first?`,
+    text: `Hey, I'm **Lumo AI** ✨ — your ${persona.name} financial coach.\n\nI have scanned your verified database records and recent transactions. What financial question would you like to explore?`,
+    createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
   });
 
   const [threads, setThreads] = useState<Thread[]>(() => loadThreads());
@@ -398,9 +273,10 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
     saveThreads(merged);
     return id;
   });
-  const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // Sync threads list when activeId initializes a new thread
+  // Sidebar starts open on desktop, closed on mobile
+  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== "undefined" && window.innerWidth >= 1024);
+
   useEffect(() => {
     setThreads(loadThreads());
   }, []);
@@ -417,7 +293,6 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
       const next = prev.map((t) => {
         if (t.id !== activeId) return t;
         const newMsgs = typeof updater === "function" ? updater(t.messages) : updater;
-        // Auto-title from first user message
         let title = t.title;
         if (title === "New Chat") {
           const firstUser = newMsgs.find((m) => m.role === "user");
@@ -442,7 +317,8 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
       return next;
     });
     setActiveId(id);
-    toast.success("New financial chat started");
+    if (isMobile) setSidebarOpen(false);
+    toast.success("New financial session started");
   };
 
   const deleteChat = (id: string) => {
@@ -480,7 +356,6 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
       .sort((a, b) => (Number(!!b.pinned) - Number(!!a.pinned)) || (b.updatedAt - a.updatedAt));
   }, [threads, persona.id]);
 
-  const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -493,10 +368,9 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
 
   useEffect(scrollToBottom, [messages.length, isTyping, activeId]);
 
-  // Stream a finished text into a message id, char by char, like ChatGPT.
   const streamInto = (id: number, full: string) => {
     let i = 0;
-    const step = Math.max(2, Math.floor(full.length / 220)); // ~220 frames total
+    const step = Math.max(3, Math.floor(full.length / 180));
     const tick = () => {
       i = Math.min(full.length, i + step);
       setMessages((prev) =>
@@ -512,62 +386,42 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
   const chipPool = (personaId: string, turn = 0): string[] => {
     const pool: Record<string, string[][]> = {
       student: [
-        ["Analyze my food spend", "Find ₹500 I can save", "Track hostel spend"],
-        ["Suggest a student SIP", "How to budget pocket money", "Cut discretionary dining"],
-        ["Emergency fund for students", "Part-time income tips", "Best student hacks"],
+        ["Analyze my food spend", "Find ₹500 I can save", "How am I doing financially?"],
+        ["How much have I spent in last 6 months?", "Suggest a student SIP", "Cut discretionary dining"],
+        ["Emergency buffer for students", "Part-time income tips", "Check for the whole year"],
       ],
       salary: [
         ["Automate my savings", "Plan emergency fund", "Lower my EMIs"],
         ["50/30/20 rule breakdown", "Tax saving ideas (80C)", "Annual bonus strategy"],
       ],
-      investor: [
-        ["Rebalance my portfolio", "Suggest a SIP", "Risk-check my stocks"],
-        ["Index funds vs Mutual funds", "Gold vs Equity ratio", "Market dip strategy"],
-      ],
-      hustler: [
-        ["Forecast next month", "Estimate my taxes", "Smooth cash flow"],
-        ["Separate business & personal", "Freelance emergency buffer", "Invoice follow-ups"],
-      ],
-      minimalist: [
-        ["Cut 3 expenses", "Essentials-only plan", "Quiet money habits"],
-        ["Audit recurring subs", "No-spend weekend challenge", "Frugal lifestyle hacks"],
-      ],
-      family: [
-        ["Plan kids' education", "Family insurance check", "Shared budget"],
-        ["Term life insurance check", "Home loan prepay strategy", "Family medical buffer"],
-      ],
-      luxury: [
-        ["Travel budget planner", "Smart luxury swaps", "Reward optimization"],
-        ["Credit card air miles check", "Guilt-free splurge fund", "Lifestyle inflation guard"],
-      ],
-      crypto: [
-        ["Allocation tips", "Stablecoin strategy", "Tax on crypto gains"],
-        ["Cold storage best practice", "DCA vs lump sum", "Risk buffer balance"],
-      ],
     };
-    const sets = pool[personaId] ?? [["Analyze my spending", "Create a budget plan", "How can I save more?"]];
+    const sets = pool[personaId] ?? [["Analyze my spending", "How much have I spent in last 6 months?", "How can I save more?"]];
     return sets[turn % sets.length];
   };
 
-  // Provider used for the most recent / in-flight AI response.
-  const [activeProvider, setActiveProvider] = useState<string>("lumo");
+  const sendMessage = async (text: string, customModel?: string) => {
+    if (!text.trim()) return;
 
-  const sendMessage = async (text: string) => {
-    // Free tier: enforce daily AI chat cap
     if (tier === "free") {
       if (!consumeAiUsage()) {
         refreshUsage();
-        toast.error("Daily AI limit reached — upgrade to keep going.");
+        toast.error("Daily AI limit reached (10/10) — upgrade to Pro for unlimited coaching.");
         return;
       }
       refreshUsage();
     }
 
-    const userMsg: Message = { id: nextId.current++, role: "user", text };
+    const modelToUse = customModel || selectedModel;
+
+    const userMsg: Message = {
+      id: nextId.current++,
+      role: "user",
+      text,
+      createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
     const history = [...messages, userMsg];
     setMessages((prev) => [...prev, userMsg]);
     setIsTyping(true);
-    setActiveProvider(selectedModel);
 
     const matchedLib = matchLibrary(text, persona.id);
 
@@ -578,7 +432,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
       const { data, error } = await supabase.functions.invoke("ai-router", {
         body: {
           message: text,
-          model: selectedModel,
+          model: modelToUse,
           persona: { id: persona.id, name: persona.name },
           history: history.slice(-8).map((m) => ({ role: m.role, text: m.text })),
           userId: currentUserId,
@@ -589,7 +443,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      const aiText = data?.text || matchedLib?.text || "Here is your financial update.";
+      const aiText = data?.text || matchedLib?.text || "Here is your updated financial analysis.";
       let parsedAction: ActionPayload | undefined;
       let cleanedText = aiText;
       const actionMatch = aiText.match(/```json:action\s*([\s\S]*?)\s*```/);
@@ -611,10 +465,16 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
 
       const id = nextId.current++;
       const aiMsg: Message = {
-        id, role: "ai", text: "", fullText: cleanedText, streaming: true,
-        insights: matchedLib?.insights, chips: chipPool(persona.id, history.length),
+        id,
+        role: "ai",
+        text: "",
+        fullText: cleanedText,
+        streaming: true,
+        insights: matchedLib?.insights,
+        chips: chipPool(persona.id, history.length),
         action: parsedAction,
         sources: data?.sources || [],
+        createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
       setIsTyping(false);
       setMessages((prev) => [...prev, aiMsg]);
@@ -625,8 +485,14 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
       const id = nextId.current++;
       setIsTyping(false);
       setMessages((prev) => [...prev, {
-        id, role: "ai", text: "", fullText: fallback.text, streaming: true,
-        insights: fallback.insights, chips: chipPool(persona.id, history.length),
+        id,
+        role: "ai",
+        text: "",
+        fullText: fallback.text,
+        streaming: true,
+        insights: fallback.insights,
+        chips: chipPool(persona.id, history.length),
+        createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       }]);
       streamInto(id, fallback.text);
     }
@@ -671,7 +537,6 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
         toast.success(`Savings goal "${action.data.goal_name}" created!`);
       }
 
-      // Mark action as applied in state
       setMessages((prev) =>
         prev.map((m) =>
           m.id === msgId && m.action
@@ -685,192 +550,240 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
     }
   };
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    sendMessage(input.trim());
-    setInput("");
-  };
-
   const quickActions = personaPrompts[persona.id] ?? defaultActions;
 
-  const Sidebar = (
-    <motion.aside
-      initial={false}
-      animate={{ width: sidebarOpen ? 288 : 0, opacity: sidebarOpen ? 1 : 0 }}
-      transition={{ type: "spring", stiffness: 240, damping: 30 }}
-      className="shrink-0 h-full relative z-30 overflow-hidden"
-    >
-      <div className="w-72 h-full flex flex-col bg-white/70 backdrop-blur-2xl border-r border-white/80 shadow-[0_10px_40px_-20px_rgba(15,23,42,0.15)]">
-        <div className="p-4 border-b border-slate-100/70">
+  // Map PromptInput models to backend model IDs
+  const modelNameToId: Record<string, string> = {
+    "Lumo Smart": "lumo",
+    "GPT-4o": "openai",
+    "Gemini 2.5 Flash": "gemini",
+    "Llama 3.3": "groq",
+    "DeepSeek R1": "openrouter",
+    "Composer 2.5": "lumo",
+    "Gemini 3.5 Flash": "gemini",
+    "GPT 5.5": "openai",
+    "Opus 4.8": "openrouter",
+    "GLM 5.2": "groq",
+  };
+
+  const handlePromptSubmit = (
+    text: string,
+    meta: { model: string; effort: string; attachments: File[] }
+  ) => {
+    const backendModel = modelNameToId[meta.model] || "lumo";
+    setSelectedModel(backendModel);
+    sendMessage(text, backendModel);
+  };
+
+  // Sidebar content (shared between desktop and mobile drawer)
+  const sidebarContent = (
+    <div className="flex flex-col h-full bg-card/95 backdrop-blur-2xl border-r border-border/60 text-card-foreground select-none">
+      {/* Top action header */}
+      <div className="p-3.5 border-b border-border/50 flex items-center justify-between gap-2">
+        <button
+          onClick={newChat}
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-semibold text-primary-foreground bg-primary hover:bg-primary/90 transition-all shadow-sm active:scale-[0.98]"
+        >
+          <Plus className="w-4 h-4" />
+          <span>New Session</span>
+        </button>
+        {isMobile && (
           <button
-            onClick={newChat}
-            className="group w-full relative overflow-hidden flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 via-violet-600 to-sky-500 shadow-[0_10px_30px_-10px_rgba(99,102,241,0.6)] hover:-translate-y-0.5 transition-transform"
+            onClick={() => setSidebarOpen(false)}
+            className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            aria-label="Close sidebar"
           >
-            <motion.span aria-hidden initial={{ x: "-150%" }} animate={{ x: "150%" }} transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }} className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12" />
-            <Plus className="w-4 h-4 relative" /> <span className="relative">New Financial Chat</span>
+            <X className="w-4 h-4" />
           </button>
+        )}
+      </div>
+
+      {/* Conversations list */}
+      <div className="flex-1 overflow-y-auto px-2 py-3 space-y-1 scrollbar-none">
+        <div className="px-3 pb-2 flex items-center justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">
+            Sessions
+          </span>
+          <span className="text-[10px] text-muted-foreground/60 font-medium">
+            {personaThreads.length}
+          </span>
         </div>
 
-        <div className="flex-1 overflow-y-auto scrollbar-none px-2 py-3 space-y-1">
-          <p className="px-3 text-[10px] uppercase tracking-[0.18em] text-slate-400 font-bold mb-2">Conversations</p>
-          {personaThreads.length === 0 && (
-            <p className="px-3 text-xs text-slate-400">No chats yet</p>
-          )}
-          {personaThreads.map((t) => {
+        {personaThreads.length === 0 ? (
+          <div className="px-3 py-6 text-center text-xs text-muted-foreground/60">
+            No previous conversations.
+          </div>
+        ) : (
+          personaThreads.map((t) => {
             const isActive = t.id === activeId;
             return (
               <div
                 key={t.id}
-                onClick={() => setActiveId(t.id)}
-                className={`group cursor-pointer flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all ${
+                onClick={() => {
+                  setActiveId(t.id);
+                  if (isMobile) setSidebarOpen(false);
+                }}
+                className={`group cursor-pointer flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all text-left ${
                   isActive
-                    ? "bg-gradient-to-r from-indigo-50 via-violet-50 to-sky-50 border border-indigo-200/60 shadow-sm"
-                    : "hover:bg-white/80 border border-transparent"
+                    ? "bg-accent text-accent-foreground font-medium shadow-xs border border-border/60"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent/40 border border-transparent"
                 }`}
               >
-                <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${isActive ? "text-indigo-500" : "text-slate-400"}`} />
+                <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${isActive ? "text-primary" : "opacity-50"}`} />
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm truncate ${isActive ? "text-slate-900 font-semibold" : "text-slate-700"}`}>
-                    {t.title}
-                  </p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
+                  <p className="text-xs truncate font-medium">{t.title}</p>
+                  <p className="text-[10px] text-muted-foreground/60 mt-0.5">
                     {new Date(t.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                   </p>
                 </div>
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
                   <button
                     onClick={(e) => { e.stopPropagation(); togglePin(t.id); }}
-                    className={`p-1 rounded-md hover:bg-white ${t.pinned ? "text-amber-500" : "text-slate-300 hover:text-slate-600"}`}
+                    className={`p-1 rounded-md hover:bg-background/80 ${t.pinned ? "text-amber-500" : "text-muted-foreground hover:text-foreground"}`}
                     title={t.pinned ? "Unpin" : "Pin"}
                   >
                     <Pin className="w-3 h-3" />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); deleteChat(t.id); }}
-                    className="p-1 rounded-md text-slate-300 hover:text-rose-500 hover:bg-white"
+                    className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-background/80"
                     title="Delete"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
                 </div>
                 {t.pinned && (
-                  <Pin className="w-3 h-3 text-amber-400 opacity-100 group-hover:hidden" />
+                  <Pin className="w-3 h-3 text-amber-500 shrink-0 group-hover:hidden" />
                 )}
               </div>
             );
-          })}
-        </div>
-
-
-        <div className="p-3 border-t border-slate-100/70 flex items-center gap-2 text-xs text-slate-500">
-          <div className="w-7 h-7 rounded-xl overflow-hidden ring-2 ring-white shadow-sm">
-            <img src={lumoAvatar} alt="" className="w-full h-full object-cover" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-slate-700 truncate">Lumo AI</p>
-            <p className="text-[10px] text-slate-400">{persona.name} persona</p>
-          </div>
-          <button onClick={onBack} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white" title="Switch persona">
-            <Settings className="w-3.5 h-3.5" />
-          </button>
-        </div>
+          })
+        )}
       </div>
-    </motion.aside>
+
+      {/* Bottom user / persona card */}
+      <div className="p-3 border-t border-border/50 flex items-center gap-2.5 bg-muted/20">
+        <div className="w-8 h-8 rounded-xl overflow-hidden border border-border shrink-0 bg-background flex items-center justify-center shadow-xs">
+          <img src={lumoAvatar} alt="Lumo AI" className="w-full h-full object-cover" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-foreground truncate">Lumo AI Coach</p>
+          <p className="text-[10px] text-muted-foreground truncate">{persona.name} mode</p>
+        </div>
+        <button
+          onClick={onBack}
+          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          title="Switch persona"
+        >
+          <Settings className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
   );
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 }}
-      className="flex flex-row h-full w-full absolute inset-0 overflow-hidden bg-[#fafafa]"
-    >
-      {Sidebar}
-      <div className="relative flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-      <button
-        onClick={() => setSidebarOpen((v) => !v)}
-        className="absolute top-4 left-4 z-40 w-10 h-10 rounded-xl bg-white/80 backdrop-blur-md border border-white shadow-sm flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-white transition-all"
-        title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
-      >
-        {sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
-      </button>
-      {/* Uploaded immersive background */}
-      <div className="absolute inset-0 -z-0 pointer-events-none">
-        <img src={coachBg} alt="" className="w-full h-full object-cover" style={{ objectPosition: "center 30%" }} />
-        <div className="absolute inset-0 bg-white/85 backdrop-blur-sm" />
-        <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-white/40 to-white/90" />
-      </div>
-
-      {/* Floating particles */}
-      {Array.from({ length: 15 }).map((_, i) => (
-        <motion.div
-          key={`bg-particle-${i}`}
-          animate={{ 
-            y: ["100%", "-10%"],
-            x: [0, Math.sin(i) * 50, 0],
-            opacity: [0, 0.4, 0],
-            rotate: [0, 360]
-          }}
-          transition={{ 
-            duration: 10 + Math.random() * 20, 
-            repeat: Infinity, 
-            ease: "linear",
-            delay: Math.random() * 5
-          }}
-          className="absolute bottom-0 w-3 h-3 rounded-md bg-gradient-to-tr from-blue-200/30 to-purple-200/30 backdrop-blur-sm pointer-events-none"
-          style={{ left: `${5 + Math.random() * 90}%` }}
+    <div className="flex flex-row h-full w-full absolute inset-0 overflow-hidden bg-background text-foreground">
+      {/* Mobile Drawer Backdrop */}
+      {isMobile && sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs transition-opacity md:hidden"
         />
-      ))}
+      )}
 
-      {/* ═══ Top Mission HUD Bar ═══ */}
-      <motion.div
-        initial={{ y: -40, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.3, duration: 0.6, type: "spring" }}
-        className="shrink-0 relative z-30 px-4 sm:px-8 py-6"
-      >
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      {/* Desktop Persistent Sidebar */}
+      {!isMobile && (
+        <motion.aside
+          initial={false}
+          animate={{ width: sidebarOpen ? 260 : 0, opacity: sidebarOpen ? 1 : 0 }}
+          transition={{ type: "spring", stiffness: 280, damping: 32 }}
+          className="shrink-0 h-full relative z-30 overflow-hidden hidden md:block"
+        >
+          <div className="w-[260px] h-full">
+            {sidebarContent}
+          </div>
+        </motion.aside>
+      )}
+
+      {/* Mobile Slide-Over Drawer */}
+      {isMobile && (
+        <motion.aside
+          initial={{ x: "-100%" }}
+          animate={{ x: sidebarOpen ? "0%" : "-100%" }}
+          transition={{ type: "spring", stiffness: 280, damping: 32 }}
+          className="fixed inset-y-0 left-0 z-50 w-72 h-full shadow-2xl md:hidden"
+        >
+          {sidebarContent}
+        </motion.aside>
+      )}
+
+      {/* Main Chat Area */}
+      <div className="relative flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-background">
+        {/* Subtle Ambient Radial Lighting (Professional FinTech style) */}
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+          <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[360px] bg-gradient-to-b from-primary/8 via-primary/2 to-transparent blur-3xl opacity-70" />
+          <div className="absolute top-1/3 -right-32 w-[400px] h-[300px] bg-indigo-500/5 blur-3xl rounded-full" />
+        </div>
+
+        {/* ═══ Top HUD Header ═══ */}
+        <header className="shrink-0 relative z-20 h-14 sm:h-16 px-3 sm:px-6 border-b border-border/40 bg-background/80 backdrop-blur-xl flex items-center justify-between gap-2">
+          {/* Left Controls */}
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <button
+              onClick={() => setSidebarOpen((v) => !v)}
+              className="w-9 h-9 rounded-xl border border-border/60 bg-card hover:bg-accent text-muted-foreground hover:text-foreground flex items-center justify-center transition-all shadow-xs"
+              title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+            >
+              {sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
+            </button>
+
             <button
               onClick={onBack}
-              className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white/60 border border-white backdrop-blur-xl text-gray-900 hover:bg-white transition-all shadow-sm group"
+              className="w-9 h-9 rounded-xl border border-border/60 bg-card hover:bg-accent text-muted-foreground hover:text-foreground flex items-center justify-center transition-all shadow-xs"
+              title="Change persona or exit"
             >
-              <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+              <LogOut className="w-4 h-4" />
             </button>
+
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <div className="truncate">
+                <span className="text-xs sm:text-sm font-semibold text-foreground truncate">
+                  {persona.name}
+                </span>
+                <span className="hidden sm:inline text-[11px] text-muted-foreground ml-1.5 font-normal">
+                  · Financial Intelligence
+                </span>
+              </div>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Plan badge */}
-            <div className={`hidden md:flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold backdrop-blur-xl border shadow-sm ${
-              isElite ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white border-transparent" :
-              isPro   ? "bg-gradient-to-r from-indigo-500 to-sky-500 text-white border-transparent" :
-                        "bg-white/70 text-slate-600 border-white"
-            }`}>
-              {isElite ? <Crown className="w-3.5 h-3.5" /> : isPro ? <Zap className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
-              {isElite ? "Elite AI+" : isPro ? "Pro AI" : "Free"}
-            </div>
-
-            {/* AI model selector */}
+          {/* Right Controls */}
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            {/* Model Selector Pill */}
             <div className="relative">
               <button
                 onClick={() => setModelMenuOpen((v) => !v)}
-                className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/70 border border-white backdrop-blur-xl text-xs font-semibold text-slate-700 hover:bg-white shadow-sm transition-all"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border/60 bg-card/90 text-xs font-medium text-foreground hover:bg-accent transition-all shadow-xs"
               >
-                <span className="w-2 h-2 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]" />
-                {activeModel.vendor}
-                <span className="hidden lg:inline text-slate-400 font-normal">· {activeModel.specialty}</span>
-                <ChevronDown className="w-3 h-3 text-slate-400" />
+                <Sparkles className="w-3.5 h-3.5 text-primary" />
+                <span className="max-w-[80px] sm:max-w-none truncate">{activeModel.label}</span>
+                <ChevronDown className="w-3 h-3 text-muted-foreground" />
               </button>
+
               <AnimatePresence>
                 {modelMenuOpen && (
                   <motion.div
                     initial={{ opacity: 0, y: -6, scale: 0.96 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -6, scale: 0.96 }}
-                    transition={{ duration: 0.18 }}
-                    className="absolute right-0 mt-2 w-72 p-2 rounded-2xl bg-white/95 backdrop-blur-2xl border border-white shadow-[0_20px_60px_-20px_rgba(15,23,42,0.25)] z-50"
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 mt-2 w-64 p-1.5 rounded-2xl border border-border bg-popover text-popover-foreground shadow-2xl backdrop-blur-xl z-50"
                   >
-                    <p className="px-2.5 pt-1.5 pb-2 text-[10px] uppercase tracking-widest font-bold text-slate-400">AI Engine</p>
+                    <p className="px-2.5 pt-1.5 pb-1 text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
+                      Execution Engine
+                    </p>
                     {AI_MODELS.map((m) => {
                       const locked = tierRank[tier] < tierRank[m.minTier];
                       const active = m.id === selectedModel;
@@ -880,31 +793,26 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
                           onClick={() => {
                             if (locked) {
                               setModelMenuOpen(false);
-                              openUpgrade(m.minTier === "elite" ? "elite" : "pro", `${m.vendor} model`);
+                              openUpgrade(m.minTier === "elite" ? "elite" : "pro", `${m.label} engine`);
                               return;
                             }
                             setSelectedModel(m.id);
                             setModelMenuOpen(false);
                             toast.success(`Switched to ${m.label}`);
                           }}
-                          className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-left transition-all ${
-                            active ? "bg-gradient-to-r from-indigo-50 via-violet-50 to-sky-50 ring-1 ring-indigo-200" : "hover:bg-slate-50"
-                          } ${locked ? "opacity-70" : ""}`}
+                          className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl text-left text-xs transition-all ${
+                            active ? "bg-accent font-semibold text-accent-foreground" : "hover:bg-muted/60 text-muted-foreground hover:text-foreground"
+                          } ${locked ? "opacity-60" : ""}`}
                         >
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-[11px] font-bold shadow ${
-                            m.vendor === "Lumo" ? "bg-gradient-to-br from-slate-700 to-slate-900" :
-                            m.vendor === "GPT" ? "bg-gradient-to-br from-emerald-500 to-teal-600" :
-                            m.vendor === "Gemini" ? "bg-gradient-to-br from-sky-500 to-indigo-600" :
-                            "bg-gradient-to-br from-orange-500 to-rose-600"
-                          }`}>{m.vendor[0]}</div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <p className="text-sm font-semibold text-slate-800 truncate">{m.label}</p>
-                              {locked && <Lock className="w-3 h-3 text-slate-400" />}
-                              {active && !locked && <Check className="w-3.5 h-3.5 text-indigo-500" />}
-                            </div>
-                            <p className="text-[11px] text-slate-500">{m.specialty} · {m.speed}{locked ? ` · ${m.minTier === "elite" ? "Elite" : "Pro"}` : ""}</p>
+                          <div className="min-w-0">
+                            <p className="font-medium text-foreground truncate">{m.label}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">{m.specialty} · {m.speed}</p>
                           </div>
+                          {locked ? (
+                            <Lock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          ) : active ? (
+                            <Check className="w-3.5 h-3.5 text-primary shrink-0" />
+                          ) : null}
                         </button>
                       );
                     })}
@@ -913,454 +821,338 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
               </AnimatePresence>
             </div>
 
-            {/* Usage meter (free only) */}
+            {/* Voice Mode Toggle */}
+            <button
+              onClick={() => {
+                if (tier === "free") return openUpgrade("pro", "Voice AI Coach");
+                setVoiceOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border/60 bg-card/90 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-all shadow-xs"
+              title="Hands-free voice assistant"
+            >
+              <Mic2 className="w-3.5 h-3.5 text-indigo-500" />
+              <span className="hidden sm:inline">Voice</span>
+              {tier === "free" && <Lock className="w-2.5 h-2.5 text-amber-500" />}
+            </button>
+
+            {/* AI Usage Badge (Free Tier) */}
             {tier === "free" && (
               <button
                 onClick={() => openUpgrade("pro", "Unlimited AI chats")}
-                className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/70 border border-white backdrop-blur-xl shadow-sm hover:bg-white transition-all"
-                title="Daily AI usage"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border/60 bg-card/90 text-xs font-semibold text-foreground hover:bg-accent transition-all shadow-xs"
+                title="Free daily limit"
               >
-                <div className="relative w-7 h-7">
-                  <svg viewBox="0 0 32 32" className="w-7 h-7 -rotate-90">
-                    <circle cx="16" cy="16" r="13" fill="none" stroke="hsl(220 14% 92%)" strokeWidth="4" />
-                    <circle cx="16" cy="16" r="13" fill="none"
-                      stroke={limitReached ? "hsl(0 84% 60%)" : "url(#usageGrad)"}
-                      strokeWidth="4" strokeLinecap="round"
-                      strokeDasharray={`${(usage.used / usage.limit) * 81.68} 81.68`} />
-                    <defs>
-                      <linearGradient id="usageGrad" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="hsl(238 84% 60%)" />
-                        <stop offset="100%" stopColor="hsl(199 89% 55%)" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                </div>
-                <div className="text-left">
-                  <p className="text-[9px] text-slate-400 uppercase font-bold tracking-wider leading-none">AI Today</p>
-                  <p className={`text-xs font-bold leading-none mt-1 ${limitReached ? "text-rose-600" : "text-slate-800"}`}>
-                    {usage.used}/{usage.limit}
-                  </p>
-                </div>
+                <Zap className={`w-3.5 h-3.5 ${limitReached ? "text-destructive" : "text-amber-500"}`} />
+                <span className={limitReached ? "text-destructive font-bold" : ""}>
+                  {usage.used}/{usage.limit}
+                </span>
               </button>
             )}
-
           </div>
-        </div>
-      </motion.div>
+        </header>
 
-      {/* ═══ Main Chat Area ═══ */}
-      <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto relative z-10 scrollbar-none pt-2 pb-6">
-        <div className="max-w-4xl mx-auto px-4 sm:px-8 space-y-10">
-          <AnimatePresence initial={false}>
-            {messages.map((msg) => (
-              <motion.div
-                key={msg.id}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, ease: "easeOut" }}
-                className={`flex w-full ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-              >
-                {msg.role === "ai" ? (
-                  <div className="flex gap-4 sm:gap-6 max-w-[95%] sm:max-w-[85%]">
-                    {/* AI Avatar */}
-                    <div className="shrink-0 pt-2">
-                      <motion.div
-                        animate={{ y: [0, -4, 0] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                        className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden shadow-md ring-2 ring-white relative"
-                        style={{ background: `linear-gradient(135deg, hsl(${persona.accentHsl} / 0.15), hsl(${persona.accentHsl} / 0.05))` }}
-                      >
-                        <img src={lumoAvatar} alt="Lumo AI" className="w-full h-full object-cover" />
-                      </motion.div>
-                    </div>
-                    
-                    {/* AI Message Container */}
-                    <div className="space-y-4 w-full">
-                      <div className="glass-card p-6 sm:p-7 rounded-[32px] rounded-tl-xl bg-white/85 border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-full blur-[20px] pointer-events-none" />
-                        <div className="relative z-10 prose prose-sm sm:prose-base max-w-none prose-headings:font-display prose-headings:font-bold prose-headings:text-gray-900 prose-h2:text-base prose-h2:uppercase prose-h2:tracking-wider prose-h2:text-gray-500 prose-h2:mt-4 prose-h2:mb-2 prose-p:text-gray-800 prose-p:leading-relaxed prose-strong:text-gray-900 prose-ul:my-2 prose-li:my-0.5 prose-li:text-gray-700">
+        {/* ═══ Message Stream ═══ */}
+        <div
+          ref={messagesContainerRef}
+          className="flex-1 min-h-0 overflow-y-auto relative z-10 px-3 sm:px-6 py-6 scrollbar-none"
+        >
+          <div className="max-w-3xl mx-auto space-y-6">
+            <AnimatePresence initial={false}>
+              {messages.map((msg) => (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.28, ease: "easeOut" }}
+                  className={`flex w-full ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  {msg.role === "ai" ? (
+                    <div className="flex flex-col gap-2 max-w-full sm:max-w-[92%] w-full">
+                      {/* Message Metadata Header */}
+                      <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
+                        <div className="w-5 h-5 rounded-lg overflow-hidden border border-border/80 bg-muted shrink-0">
+                          <img src={lumoAvatar} alt="Lumo" className="w-full h-full object-cover" />
+                        </div>
+                        <span className="font-semibold text-foreground">Lumo AI</span>
+                        <span className="text-[10px] opacity-60">· {msg.createdAt || "Just now"}</span>
+                      </div>
+
+                      {/* AI Card Content */}
+                      <div className="border border-border/70 bg-card/95 backdrop-blur-xl rounded-2xl p-4 sm:p-6 shadow-xs text-card-foreground">
+                        <div className="prose prose-slate dark:prose-invert max-w-none text-sm sm:text-base leading-relaxed break-words font-sans">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
                             {msg.text || "‎"}
                           </ReactMarkdown>
                           {msg.streaming && (
-                            <span className="inline-block w-2 h-5 align-[-2px] ml-0.5 bg-blue-500 animate-pulse rounded-sm" />
+                            <span className="inline-block w-1.5 h-4 ml-1 bg-primary animate-pulse align-middle" />
                           )}
                         </div>
 
-                        {/* Toolbar */}
+                        {/* RAG Citations Accordion */}
+                        {!msg.streaming && msg.sources && msg.sources.length > 0 && (
+                          <div className="mt-4 pt-3 border-t border-border/60">
+                            <details className="group rounded-xl border border-border/70 bg-muted/30 p-2.5 text-xs transition-colors">
+                              <summary className="cursor-pointer list-none flex items-center justify-between font-medium text-foreground select-none">
+                                <div className="flex items-center gap-2">
+                                  <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-bold text-[10px] tracking-wide">
+                                    VERIFIED RAG
+                                  </span>
+                                  <span className="text-xs font-medium text-foreground">
+                                    Financial Sources Cited
+                                  </span>
+                                  <span className="text-[11px] text-muted-foreground font-normal">
+                                    ({msg.sources.length})
+                                  </span>
+                                </div>
+                                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground group-open:rotate-180 transition-transform" />
+                              </summary>
+
+                              <div className="mt-2.5 space-y-2 pt-2 border-t border-border/40">
+                                {msg.sources.map((s, idx) => (
+                                  <div
+                                    key={s.id || idx}
+                                    className="p-2.5 rounded-lg bg-card border border-border/60 flex flex-col gap-1 text-[11px]"
+                                  >
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="flex items-center gap-1.5 font-semibold text-foreground truncate">
+                                        {s.type === "knowledge" ? (
+                                          <BookOpen className="w-3.5 h-3.5 text-primary shrink-0" />
+                                        ) : (
+                                          <Database className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                        )}
+                                        <span className="truncate">{s.title}</span>
+                                      </div>
+                                      <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider shrink-0 ${
+                                        s.type === "knowledge"
+                                          ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+                                          : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                      }`}>
+                                        {s.type === "knowledge" ? "Vector Doc" : "SQL Data"}
+                                      </span>
+                                    </div>
+                                    <p className="text-muted-foreground font-normal leading-relaxed">
+                                      {s.snippet}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            </details>
+                          </div>
+                        )}
+
+                        {/* Interactive In-Chat Action Execution */}
+                        {!msg.streaming && msg.action && (
+                          <div className="mt-4 p-4 rounded-xl border border-primary/30 bg-primary/5 flex flex-col gap-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                                <Sparkles className="w-3.5 h-3.5" />
+                                {msg.action.type === "create_transaction" ? "Confirm Logged Expense" :
+                                 msg.action.type === "create_budget" ? "Confirm New Budget" : "Confirm New Goal"}
+                              </span>
+                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                                msg.action.status === "applied"
+                                  ? "bg-emerald-500/10 text-emerald-600 font-bold"
+                                  : "bg-primary/10 text-primary"
+                              }`}>
+                                {msg.action.status === "applied" ? "✓ Recorded" : "Pending Confirmation"}
+                              </span>
+                            </div>
+
+                            <div className="text-xs sm:text-sm text-foreground">
+                              {msg.action.type === "create_transaction" && (
+                                <p>Record <strong>₹{msg.action.data.amount}</strong> for <strong>{msg.action.data.title}</strong> under category <em>{msg.action.data.category || "General"}</em>?</p>
+                              )}
+                              {msg.action.type === "create_budget" && (
+                                <p>Set monthly limit of <strong>₹{msg.action.data.monthly_limit}</strong> for <strong>{msg.action.data.category}</strong>?</p>
+                              )}
+                              {msg.action.type === "create_goal" && (
+                                <p>Create savings target <strong>{msg.action.data.goal_name}</strong> for <strong>₹{msg.action.data.target_amount}</strong>?</p>
+                              )}
+                            </div>
+
+                            {msg.action.status !== "applied" && (
+                              <div className="flex items-center gap-2 pt-1">
+                                <button
+                                  onClick={() => executeAction(msg.id, msg.action!)}
+                                  className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xs"
+                                >
+                                  Confirm & Apply
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setMessages((prev) =>
+                                      prev.map((m) =>
+                                        m.id === msg.id && m.action
+                                          ? { ...m, action: { ...m.action, status: "cancelled" } }
+                                          : m
+                                      )
+                                    );
+                                    toast("Action dismissed");
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg text-xs font-medium border border-border bg-card hover:bg-muted text-muted-foreground transition-all"
+                                >
+                                  Dismiss
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Action feedback toolbar */}
                         {!msg.streaming && (
-                          <div className="mt-4 pt-3 border-t border-gray-100 flex items-center gap-1 text-gray-400">
-                            <button onClick={() => { navigator.clipboard.writeText(msg.text); toast.success("Copied"); }} className="p-1.5 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors" title="Copy"><Copy className="w-3.5 h-3.5" /></button>
-                            <button onClick={() => sendMessage(messages.find(x => x.role === 'user' && x.id < msg.id)?.text ?? 'Try again')} className="p-1.5 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors" title="Regenerate"><RotateCcw className="w-3.5 h-3.5" /></button>
-                            <button onClick={() => toast.success("Thanks for the feedback")} className="p-1.5 rounded-lg hover:bg-gray-100 hover:text-emerald-600 transition-colors" title="Helpful"><ThumbsUp className="w-3.5 h-3.5" /></button>
-                            <button onClick={() => toast("Got it — I'll improve")} className="p-1.5 rounded-lg hover:bg-gray-100 hover:text-rose-600 transition-colors" title="Not helpful"><ThumbsDown className="w-3.5 h-3.5" /></button>
-                            <button onClick={() => toast.success("Saved to insights")} className="p-1.5 rounded-lg hover:bg-gray-100 hover:text-amber-600 transition-colors" title="Save"><Bookmark className="w-3.5 h-3.5" /></button>
+                          <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-muted-foreground text-xs">
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => { navigator.clipboard.writeText(msg.text); toast.success("Copied to clipboard"); }}
+                                className="p-1.5 rounded-lg hover:bg-accent hover:text-foreground transition-colors"
+                                title="Copy"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const lastUser = messages.find((x) => x.role === "user" && x.id < msg.id);
+                                  if (lastUser) sendMessage(lastUser.text);
+                                }}
+                                className="p-1.5 rounded-lg hover:bg-accent hover:text-foreground transition-colors"
+                                title="Regenerate"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => toast.success("Feedback recorded")}
+                                className="p-1.5 rounded-lg hover:bg-accent hover:text-emerald-500 transition-colors"
+                                title="Helpful"
+                              >
+                                <ThumbsUp className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => toast("Feedback recorded")}
+                                className="p-1.5 rounded-lg hover:bg-accent hover:text-rose-500 transition-colors"
+                                title="Not helpful"
+                              >
+                                <ThumbsDown className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                            <span className="text-[10px] text-muted-foreground/60 font-medium">
+                              Verified Analysis
+                            </span>
                           </div>
                         )}
                       </div>
 
-                      {/* RAG Grounding Sources & Citations */}
-                      {!msg.streaming && msg.sources && msg.sources.length > 0 && (
-                        <div className="pt-1">
-                          <details className="group rounded-2xl bg-white/90 border border-slate-200/90 shadow-xs p-3 transition-all text-xs backdrop-blur-md">
-                            <summary className="cursor-pointer list-none flex items-center justify-between font-semibold text-slate-700 select-none">
-                              <div className="flex items-center gap-2">
-                                <span className="flex h-5 px-1.5 items-center justify-center rounded-md bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-bold text-[10px] shadow-xs">
-                                  RAG
-                                </span>
-                                <span className="text-xs font-semibold text-slate-800">
-                                  Verified Sources & Financial Context
-                                </span>
-                                <span className="text-[11px] font-normal text-slate-400">
-                                  ({msg.sources.length})
-                                </span>
-                              </div>
-                              <span className="text-slate-400 group-open:rotate-180 transition-transform">
-                                <ChevronDown className="w-4 h-4" />
-                              </span>
-                            </summary>
-
-                            <div className="mt-3 space-y-2 pt-2.5 border-t border-slate-100">
-                              {msg.sources.map((s, idx) => (
-                                <div
-                                  key={s.id || idx}
-                                  className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200/70 flex flex-col gap-1 text-[11px]"
-                                >
-                                  <div className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-1.5 font-semibold text-slate-800 truncate">
-                                      {s.type === "knowledge" ? (
-                                        <BookOpen className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                                      ) : (
-                                        <Database className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                      )}
-                                      <span className="truncate">{s.title}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 shrink-0">
-                                      <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider ${
-                                        s.type === "knowledge"
-                                          ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                                          : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                      }`}>
-                                        {s.type === "knowledge" ? "Vector Doc" : "SQL Data"}
-                                      </span>
-                                      {s.similarity !== undefined && s.similarity > 0 && (
-                                        <span className="text-[10px] font-medium text-slate-400" title="Semantic Cosine Similarity">
-                                          {(s.similarity * 100).toFixed(0)}% match
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <p className="text-slate-600 leading-relaxed font-normal">
-                                    {s.snippet}
-                                  </p>
-                                </div>
-                              ))}
-                            </div>
-                          </details>
-                        </div>
-                      )}
-
-                      {/* Interactive Action Card */}
-                      {!msg.streaming && msg.action && (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.96 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          className="p-5 rounded-2xl bg-gradient-to-r from-indigo-50 via-violet-50 to-sky-50 border border-indigo-200 shadow-sm"
-                        >
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <Sparkles className="w-4 h-4 text-indigo-600" />
-                              <span className="text-xs font-bold uppercase tracking-wider text-indigo-900">
-                                {msg.action.type === "create_transaction" ? "Log Expense" :
-                                 msg.action.type === "create_budget" ? "Create Budget" : "New Goal"}
-                              </span>
-                            </div>
-                            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                              msg.action.status === "applied"
-                                ? "bg-emerald-100 text-emerald-800"
-                                : "bg-indigo-100 text-indigo-800"
-                            }`}>
-                              {msg.action.status === "applied" ? "✓ Applied" : "Pending Confirmation"}
-                            </span>
-                          </div>
-
-                          <div className="text-sm text-slate-700 mb-4 font-medium">
-                            {msg.action.type === "create_transaction" && (
-                              <p>Add <strong>₹{msg.action.data.amount}</strong> for <strong>{msg.action.data.title}</strong> ({msg.action.data.category || "General"})</p>
-                            )}
-                            {msg.action.type === "create_budget" && (
-                              <p>Set a monthly limit of <strong>₹{msg.action.data.monthly_limit}</strong> for <strong>{msg.action.data.category}</strong></p>
-                            )}
-                            {msg.action.type === "create_goal" && (
-                              <p>Create savings goal <strong>{msg.action.data.goal_name}</strong> with target <strong>₹{msg.action.data.target_amount}</strong></p>
-                            )}
-                          </div>
-
-                          {msg.action.status !== "applied" && (
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => executeAction(msg.id, msg.action!)}
-                                className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition-colors"
-                              >
-                                Confirm & Apply
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setMessages((prev) =>
-                                    prev.map((m) =>
-                                      m.id === msg.id && m.action
-                                        ? { ...m, action: { ...m.action, status: "cancelled" } }
-                                        : m
-                                    )
-                                  );
-                                  toast("Action cancelled");
-                                }}
-                                className="px-3 py-2 rounded-xl text-xs font-medium bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors"
-                              >
-                                Dismiss
-                              </button>
-                            </div>
-                          )}
-                        </motion.div>
-                      )}
-
-                      {/* Follow-up suggestion chips */}
+                      {/* Follow-up Question Chips */}
                       {!msg.streaming && msg.chips && msg.chips.length > 0 && (
-                        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-1.5 pt-1">
                           {msg.chips.map((chip) => (
                             <button
                               key={chip}
                               onClick={() => sendMessage(chip)}
-                              className="px-3.5 py-2 text-sm rounded-full bg-white/80 border border-gray-200 text-gray-700 hover:text-gray-900 hover:border-blue-300 hover:bg-white hover:shadow-md transition-all backdrop-blur-md flex items-center gap-1.5"
+                              className="px-3 py-1.5 text-xs rounded-full border border-border/70 bg-card hover:bg-accent text-muted-foreground hover:text-foreground hover:border-border transition-all flex items-center gap-1.5 shadow-2xs"
                             >
-                              <Sparkles className="w-3 h-3 text-blue-500" /> {chip}
+                              <Sparkles className="w-3 h-3 text-primary" />
+                              <span>{chip}</span>
                             </button>
-                          ))}
-                        </motion.div>
-                      )}
-
-                      {/* Dynamic AI Insights */}
-                      {msg.insights && msg.insights.length > 0 && !msg.streaming && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {msg.insights.map((insight, idx) => (
-                            <motion.div
-                              key={insight.label}
-                              initial={{ opacity: 0, y: 20 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: 0.2 + idx * 0.1, duration: 0.5, type: "spring" }}
-                              className="glass-card p-6 rounded-[24px] bg-white border border-gray-100 shadow-sm relative overflow-hidden group"
-                            >
-                              <p className="text-xs uppercase tracking-widest font-bold text-gray-400 mb-2">
-                                {insight.label}
-                              </p>
-                              <p className="font-display text-3xl font-bold text-gray-900 mb-3">
-                                <AnimatedValue value={insight.value} />
-                              </p>
-
-                              {insight.change && (
-                                <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg ${
-                                  insight.positive
-                                    ? "bg-emerald-50 text-emerald-700"
-                                    : insight.positive === false
-                                    ? "bg-rose-50 text-rose-700"
-                                    : "bg-gray-100 text-gray-600"
-                                }`}>
-                                  {insight.positive ? <TrendingUp className="w-3.5 h-3.5" /> : insight.positive === false ? <AlertTriangle className="w-3.5 h-3.5" /> : null}
-                                  {insight.change}
-                                </div>
-                              )}
-
-                              {insight.chartData && (
-                                <div className="mt-5 h-16 w-full">
-                                  <ResponsiveContainer width="100%" height="100%">
-                                    {insight.chartData.length <= 2 ? (
-                                      <PieChart>
-                                        <Pie data={insight.chartData} cx="85%" cy="50%" innerRadius={18} outerRadius={32} dataKey="value" strokeWidth={0}>
-                                          {insight.chartData.map((_, ci) => (
-                                            <Cell key={ci} fill={ci === 0 ? accentColor : "hsl(220, 20%, 94%)"} />
-                                          ))}
-                                        </Pie>
-                                      </PieChart>
-                                    ) : (
-                                      <BarChart data={insight.chartData}>
-                                        <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                                          {insight.chartData.map((_, ci) => (
-                                            <Cell key={ci} fill={CHART_COLORS[ci % CHART_COLORS.length]} />
-                                          ))}
-                                        </Bar>
-                                      </BarChart>
-                                    )}
-                                  </ResponsiveContainer>
-                                </div>
-                              )}
-                            </motion.div>
                           ))}
                         </div>
                       )}
                     </div>
-                  </div>
-                ) : (
-                  <div className="max-w-[85%] sm:max-w-[70%]">
-                    <div className="p-5 sm:p-6 rounded-[28px] rounded-tr-xl bg-gradient-to-br from-indigo-500 via-violet-500 to-sky-500 text-white shadow-[0_12px_40px_-12px_rgba(99,102,241,0.5)] relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/15 rounded-full blur-[30px]" />
-                      <p className="text-base sm:text-lg leading-relaxed relative z-10 font-medium">
+                  ) : (
+                    /* User Speech Bubble */
+                    <div className="max-w-[85%] sm:max-w-[75%]">
+                      <div className="bg-primary text-primary-foreground font-medium rounded-2xl rounded-br-xs px-4 py-3 sm:px-5 sm:py-3 shadow-xs text-sm sm:text-base leading-relaxed">
                         {msg.text}
-                      </p>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground/70 text-right mt-1 px-1">
+                        {msg.createdAt || "Just now"}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </motion.div>
-            ))}
-          </AnimatePresence>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
 
-          <AnimatePresence>
+            {/* In-Flight Reasoning Status */}
             {isTyping && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="flex gap-4 sm:gap-6 max-w-[80%]"
+                className="flex items-center gap-2.5 px-3 py-2 text-xs text-muted-foreground"
               >
-                <div className="shrink-0 pt-2">
-                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden shadow-md ring-2 ring-white">
-                    <img src={lumoAvatar} alt="Lumo AI" className="w-full h-full object-cover" />
-                  </div>
-                </div>
-                <div className={`px-5 py-4 rounded-[24px] rounded-tl-xl bg-white/85 border backdrop-blur-xl flex items-center gap-3 shadow-sm transition-shadow ${
-                  activeProvider === "gpt" ? "border-emerald-200 shadow-[0_0_30px_-10px_rgba(16,185,129,0.45)]" :
-                  activeProvider === "gemini" ? "border-sky-200 shadow-[0_0_30px_-10px_rgba(14,165,233,0.45)]" :
-                  activeProvider === "claude" ? "border-orange-200 shadow-[0_0_30px_-10px_rgba(244,114,82,0.5)]" :
-                  "border-white"
-                }`}>
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
-                    className={`w-5 h-5 rounded-full border-2 ${
-                      activeProvider === "gpt" ? "border-emerald-200 border-t-emerald-600" :
-                      activeProvider === "gemini" ? "border-sky-200 border-t-sky-600" :
-                      activeProvider === "claude" ? "border-orange-200 border-t-orange-600" :
-                      "border-blue-200 border-t-blue-500"
-                    }`}
-                  />
-                  <motion.span
-                    animate={{ opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 1.6, repeat: Infinity }}
-                    className={`text-sm font-medium bg-clip-text text-transparent ${
-                      activeProvider === "gpt" ? "bg-gradient-to-r from-emerald-600 to-teal-600" :
-                      activeProvider === "gemini" ? "bg-gradient-to-r from-sky-600 to-indigo-600" :
-                      activeProvider === "claude" ? "bg-gradient-to-r from-orange-600 to-rose-600" :
-                      "bg-gradient-to-r from-indigo-600 via-violet-500 to-sky-500"
-                    }`}
-                  >
-                    {activeProvider === "gpt" ? "GPT is reasoning step-by-step…" :
-                     activeProvider === "gemini" ? "Gemini is analyzing at speed…" :
-                     activeProvider === "claude" ? "Claude is forecasting deeply…" :
-                     isElite ? "Routing across GPT · Gemini · Claude…" :
-                     isPro ? "Running advanced financial analysis…" :
-                     "Lumo AI is analyzing your finances…"}
-                  </motion.span>
-                </div>
+                <div className="w-4 h-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+                <span className="font-medium animate-pulse">
+                  Lumo AI is analyzing your verified database records & calculations…
+                </span>
               </motion.div>
             )}
-          </AnimatePresence>
-          <div className="h-2" />
-        </div>
-      </div>
-
-      {/* ═══ Smart Input Dock ═══ */}
-      <motion.div
-        initial={{ y: 50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.4, duration: 0.6, type: "spring" }}
-        className="shrink-0 relative z-30 pb-4 pt-4 px-4 sm:px-8 bg-gradient-to-t from-[#fafafa] via-[#fafafa]/90 to-transparent"
-      >
-        <div className="max-w-4xl mx-auto space-y-4">
-          {/* Quick Actions (Scrollable) */}
-          <div className="flex gap-3 overflow-x-auto scrollbar-none pb-2 mask-linear-fade">
-            {quickActions.map((action, i) => (
-              <button
-                key={i}
-                onClick={() => sendMessage(action)}
-                className="shrink-0 px-4 py-2.5 rounded-xl bg-white border border-gray-100 shadow-sm text-sm font-medium text-gray-700 hover:text-gray-900 hover:border-gray-200 hover:shadow-md transition-all flex items-center gap-2"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-blue-500" /> {action}
-              </button>
-            ))}
           </div>
-
-          {/* Floating Input Area — or upgrade card when free-tier limit hit */}
-          {limitReached ? (
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="relative overflow-hidden rounded-[28px] p-6 sm:p-7 bg-gradient-to-br from-indigo-50 via-white to-violet-50 border border-indigo-200/60 shadow-[0_20px_60px_-20px_rgba(99,102,241,0.35)]"
-            >
-              <div className="absolute -top-16 -right-16 w-56 h-56 bg-violet-200/40 rounded-full blur-3xl" />
-              <div className="absolute -bottom-16 -left-16 w-56 h-56 bg-sky-200/40 rounded-full blur-3xl" />
-              <div className="relative flex items-start gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shrink-0">
-                  <Crown className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs uppercase tracking-widest font-bold text-indigo-600 mb-1">Daily limit reached</p>
-                  <h3 className="font-display text-xl sm:text-2xl font-bold text-slate-900 mb-1.5">You've used all {FREE_DAILY_LIMIT} free AI chats today.</h3>
-                  <p className="text-sm text-slate-600 mb-4">Upgrade to continue unlimited AI-powered financial coaching with smarter models, memory and forecasting.</p>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => openUpgrade("pro", "Unlimited AI chats")}
-                      className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 shadow-md hover:-translate-y-0.5 transition-transform"
-                    >
-                      Upgrade to Pro
-                    </button>
-                    <button
-                      onClick={() => navigate("/pricing")}
-                      className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 bg-white border border-slate-200 hover:border-slate-300 transition-all"
-                    >
-                      Compare plans
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          ) : (
-            <div className="glass-card bg-white/80 border-white p-2 rounded-[28px] shadow-[0_8px_30px_rgb(0,0,0,0.06)] flex items-center gap-2">
-              <button
-                onClick={() => {
-                  if (tier === "free") return openUpgrade("pro", "Voice AI");
-                  setVoiceOpen(true);
-                }}
-                className={`w-12 h-12 flex items-center justify-center rounded-2xl shrink-0 relative transition-all ${
-                  tier === "free"
-                    ? "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-                    : "text-white bg-gradient-to-br from-indigo-600 to-violet-600 shadow-md hover:-translate-y-0.5"
-                }`}
-                title={tier === "free" ? "Voice AI — upgrade to unlock" : isElite ? "Lumo Voice — live conversation" : "Voice dictation"}
-              >
-                <Mic className="w-6 h-6" />
-                {tier === "free" && <Lock className="absolute top-1.5 right-1.5 w-3 h-3 text-amber-500" />}
-              </button>
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                placeholder={tier === "free" ? `Ask Lumo… (${usage.remaining} chats left today)` : "Ask me anything about your finances..."}
-                className="flex-1 bg-transparent border-none outline-none text-lg text-gray-900 placeholder:text-gray-400 px-2"
-              />
-              <button
-                onClick={handleSend}
-                disabled={!input.trim()}
-                className="w-12 h-12 flex items-center justify-center rounded-2xl bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50 disabled:hover:bg-gray-900 transition-colors shrink-0 shadow-md"
-              >
-                <Send className="w-5 h-5 -ml-0.5" />
-              </button>
-            </div>
-          )}
         </div>
-      </motion.div>
+
+        {/* ═══ Bottom Input Dock with Provided PromptInput ═══ */}
+        <div className="shrink-0 relative z-20 pb-4 pt-2 px-3 sm:px-6 bg-gradient-to-t from-background via-background/95 to-transparent">
+          <div className="max-w-3xl mx-auto space-y-2.5">
+            {/* Quick Action Suggestion Chips */}
+            <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 mask-linear-fade">
+              {quickActions.map((action, i) => (
+                <button
+                  key={i}
+                  onClick={() => sendMessage(action)}
+                  className="shrink-0 px-3 py-1.5 rounded-full border border-border/70 bg-card/80 hover:bg-accent text-xs font-medium text-muted-foreground hover:text-foreground transition-all flex items-center gap-1.5 shadow-2xs"
+                >
+                  <Sparkles className="w-3 h-3 text-primary" />
+                  <span>{action}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Upgrade banner if free limit reached */}
+            {limitReached ? (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-5 rounded-2xl border border-destructive/30 bg-destructive/5 text-foreground flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm"
+              >
+                <div>
+                  <h4 className="text-sm font-semibold flex items-center gap-1.5">
+                    <Crown className="w-4 h-4 text-amber-500" />
+                    Daily AI Coaching Limit Reached (10/10)
+                  </h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Upgrade to Pro for unlimited financial sessions, live voice mode, and predictive forecasting.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => openUpgrade("pro", "Unlimited AI coaching")}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xs"
+                  >
+                    Upgrade to Pro
+                  </button>
+                  <button
+                    onClick={() => navigate("/pricing")}
+                    className="px-3.5 py-2 rounded-xl text-xs font-medium border border-border bg-card hover:bg-accent text-muted-foreground hover:text-foreground transition-all"
+                  >
+                    Plans
+                  </button>
+                </div>
+              </motion.div>
+            ) : (
+              /* The New Executive PromptInput Component */
+              <div className="w-full flex justify-center">
+                <PromptInput
+                  onSubmit={handlePromptSubmit}
+                  placeholder={tier === "free" ? `Ask Lumo anything… (${usage.remaining} chats left today)` : "Ask Lumo about budgets, spending, or financial goals…"}
+                  models={["Lumo Smart", "GPT-4o", "Gemini 2.5 Flash", "Llama 3.3", "DeepSeek R1"]}
+                  efforts={["Quick", "Balanced", "Deep Plan"]}
+                  className="w-full"
+                />
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Plan-gated upgrade modal */}
+      {/* Plan-Gated Upgrade Modal */}
       <UpgradeModal
         open={upgradeOpen}
         onOpenChange={setUpgradeOpen}
@@ -1368,7 +1160,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
         feature={upgradeFeature}
       />
 
-      {/* Lumo Voice AI — full conversational voice assistant */}
+      {/* Full Screen Live Voice Assistant Modal */}
       <LumoVoiceMode
         open={voiceOpen}
         onClose={() => setVoiceOpen(false)}
@@ -1377,8 +1169,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
         selectedModel={selectedModel}
         seedHistory={messages.slice(-6).map((m) => ({ role: m.role, text: m.fullText || m.text }))}
       />
-    </motion.div>
-
+    </div>
   );
 };
 

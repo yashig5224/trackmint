@@ -43,7 +43,7 @@ const Coach = () => {
   const handleExit = () => navigate(homePath);
 
   return (
-    <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-[#fafafa]">
+    <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-background">
       <SEO
         title="AI Financial Coach — TrackMint"
         description="Chat with your personal AI financial coach. Pick a persona, get instant budget, savings and investment guidance powered by GPT, Gemini and Claude."
