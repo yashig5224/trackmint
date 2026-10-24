@@ -293,27 +293,27 @@ export async function retrieveFinancialData(
   sb: ReturnType<typeof createClient>,
   userId: string
 ): Promise<{ snapshotText: string; sources: RetrievedSource[] }> {
-  const since30 = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
   const sources: RetrievedSource[] = [];
+  const adminKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY")!;
+  const dataSb = createClient(Deno.env.get("SUPABASE_URL")!, adminKey);
 
   const [profileRes, txRes, budgetRes, goalRes, historyRes] = await Promise.all([
-    sb.from("profiles").select("monthly_income, currency, current_plan, financial_score").eq("id", userId).maybeSingle(),
-    sb.from("transactions")
+    dataSb.from("profiles").select("monthly_income, currency, current_plan, financial_score").eq("id", userId).maybeSingle(),
+    dataSb.from("transactions")
       .select("transaction_date, title, category, amount, type, recurring")
       .eq("user_id", userId)
-      .gte("transaction_date", since30)
       .order("transaction_date", { ascending: false })
-      .limit(300),
-    sb.from("budgets")
+      .limit(500),
+    dataSb.from("budgets")
       .select("category, monthly_limit, spent_amount, month")
       .eq("user_id", userId)
       .order("month", { ascending: false })
-      .limit(20),
-    sb.from("goals")
+      .limit(30),
+    dataSb.from("goals")
       .select("goal_name, target_amount, current_amount, deadline, category")
       .eq("user_id", userId)
       .limit(10),
-    sb.from("ai_history")
+    dataSb.from("ai_history")
       .select("message, ai_response, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
@@ -329,21 +329,33 @@ export async function retrieveFinancialData(
   const currency = profile?.currency || "INR";
   const monthlyIncome = Number(profile?.monthly_income || 0);
 
-  const income30 = txs.filter((t) => t.type === "income").reduce((s, t) => s + Number(t.amount || 0), 0);
-  const expense30 = txs.filter((t) => t.type !== "income").reduce((s, t) => s + Number(t.amount || 0), 0);
+  // Time boundaries
+  const now = Date.now();
+  const since30 = new Date(now - 30 * 86400_000).toISOString().slice(0, 10);
+  const since180 = new Date(now - 180 * 86400_000).toISOString().slice(0, 10);
+  const since365 = new Date(now - 365 * 86400_000).toISOString().slice(0, 10);
+
+  // All-time metrics across all logged transactions
+  const totalAllTimeExpenses = txs.filter((t) => t.type !== "income").reduce((s, t) => s + Number(t.amount || 0), 0);
+  const totalAllTimeIncome = txs.filter((t) => t.type === "income").reduce((s, t) => s + Number(t.amount || 0), 0);
+
+  // Windowed metrics
+  const txs30 = txs.filter((t) => (t.transaction_date || "") >= since30);
+  const txs180 = txs.filter((t) => (t.transaction_date || "") >= since180);
+  const txs365 = txs.filter((t) => (t.transaction_date || "") >= since365);
+
+  const expense30 = txs30.filter((t) => t.type !== "income").reduce((s, t) => s + Number(t.amount || 0), 0);
+  const income30 = txs30.filter((t) => t.type === "income").reduce((s, t) => s + Number(t.amount || 0), 0);
   const savings30 = income30 - expense30;
   const savingsRate = income30 > 0 ? ((savings30 / income30) * 100) : 0;
 
-  // Add primary data sources for verifiable citation
-  sources.push({
-    id: "data-30d-cashflow",
-    title: "User 30-Day Cashflow",
-    category: "financial_data",
-    type: "financial_data",
-    snippet: `Income: ₹${Math.round(income30).toLocaleString("en-IN")}, Expenses: ₹${Math.round(expense30).toLocaleString("en-IN")}, Net Savings: ₹${Math.round(savings30).toLocaleString("en-IN")} (${savingsRate.toFixed(1)}% savings rate).`,
-  });
+  const expense180 = txs180.filter((t) => t.type !== "income").reduce((s, t) => s + Number(t.amount || 0), 0);
+  const income180 = txs180.filter((t) => t.type === "income").reduce((s, t) => s + Number(t.amount || 0), 0);
 
-  // Category breakdown
+  const expense365 = txs365.filter((t) => t.type !== "income").reduce((s, t) => s + Number(t.amount || 0), 0);
+  const income365 = txs365.filter((t) => t.type === "income").reduce((s, t) => s + Number(t.amount || 0), 0);
+
+  // Category breakdown across all logged transactions
   const catMap = new Map<string, number>();
   for (const t of txs) {
     if (t.type === "income") continue;
@@ -352,12 +364,23 @@ export async function retrieveFinancialData(
   }
   const topCategories = [...catMap.entries()]
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
+    .slice(0, 6)
     .map(([cat, amt]) => ({
       category: cat,
       amount: amt,
-      pct: expense30 > 0 ? (amt / expense30) * 100 : 0,
+      pct: totalAllTimeExpenses > 0 ? (amt / totalAllTimeExpenses) * 100 : 0,
     }));
+
+  // Build verifiable sources
+  if (txs.length > 0) {
+    sources.push({
+      id: "data-user-transactions-log",
+      title: `User Logged Transactions (${txs.length} entries)`,
+      category: "financial_data",
+      type: "financial_data",
+      snippet: `Logged expenses: ₹${Math.round(totalAllTimeExpenses).toLocaleString("en-IN")}, 6-Month: ₹${Math.round(expense180).toLocaleString("en-IN")}. Recent: ${txs.slice(0, 5).map(t => `${t.title} (-₹${t.amount})`).join(", ")}.`,
+    });
+  }
 
   if (topCategories.length > 0) {
     sources.push({
@@ -369,7 +392,7 @@ export async function retrieveFinancialData(
     });
   }
 
-  // Active budgets & breaches
+  // Active budgets
   if (budgets.length > 0) {
     const budgetList = budgets.map((b) => {
       const lim = Number(b.monthly_limit || 0);
@@ -404,15 +427,24 @@ export async function retrieveFinancialData(
   }
 
   // Build rendered snapshot text
-  const lines: string[] = ["STRUCTURED FINANCIAL DATA (Retrieved live from database via SQL):"];
-  lines.push(`- Declared Income: ₹${Math.round(monthlyIncome).toLocaleString("en-IN")} • Currency: ${currency}`);
-  lines.push(`- 30-Day Realized Income: ₹${Math.round(income30).toLocaleString("en-IN")}`);
-  lines.push(`- 30-Day Expenses: ₹${Math.round(expense30).toLocaleString("en-IN")}`);
-  lines.push(`- 30-Day Net Savings: ₹${Math.round(savings30).toLocaleString("en-IN")} (${savingsRate.toFixed(1)}% savings rate)`);
+  const lines: string[] = ["STRUCTURED FINANCIAL DATA (Retrieved live from Supabase via SQL):"];
+  lines.push(`- Declared Income: ₹${Math.round(monthlyIncome).toLocaleString("en-IN")}/month • Currency: ${currency}`);
+  lines.push(`- Total Logged Transactions in Database: ${txs.length} entries`);
+  lines.push(`- All-Time Logged Expenses: ₹${Math.round(totalAllTimeExpenses).toLocaleString("en-IN")}`);
+  lines.push(`- Last 6 Months (180 Days) Expenses: ₹${Math.round(expense180).toLocaleString("en-IN")}`);
+  lines.push(`- Last 12 Months (Yearly) Expenses: ₹${Math.round(expense365).toLocaleString("en-IN")}`);
+  lines.push(`- Last 30 Days Expenses: ₹${Math.round(expense30).toLocaleString("en-IN")}`);
 
   if (topCategories.length) {
-    lines.push(`- Top Expense Categories:`);
-    topCategories.forEach((c) => lines.push(`   • ${c.category}: ₹${Math.round(c.amount).toLocaleString("en-IN")} (${c.pct.toFixed(0)}% of total)`));
+    lines.push(`- Category Spending Totals (From all logged transactions):`);
+    topCategories.forEach((c) => lines.push(`   • ${c.category}: ₹${Math.round(c.amount).toLocaleString("en-IN")} (${c.pct.toFixed(0)}% of total logged)`));
+  }
+
+  if (txs.length > 0) {
+    lines.push(`- Recent Specific Logged Transactions (Latest entries):`);
+    txs.slice(0, 12).forEach((t) => {
+      lines.push(`   • ${t.transaction_date}: ${t.title} [${t.category || "General"}] ${t.type === "income" ? "+" : "-"}₹${Math.round(Number(t.amount || 0)).toLocaleString("en-IN")}`);
+    });
   }
 
   if (budgets.length) {
@@ -426,12 +458,12 @@ export async function retrieveFinancialData(
   }
 
   if (goals.length) {
-    lines.push(`- Active Goals:`);
+    lines.push(`- Active Financial Goals:`);
     goals.forEach((g) => {
       const tgt = Number(g.target_amount || 0);
       const cur = Number(g.current_amount || 0);
       const pct = tgt > 0 ? (cur / tgt) * 100 : 0;
-      lines.push(`   • ${g.goal_name}: ₹${Math.round(cur).toLocaleString("en-IN")} / ₹${Math.round(tgt).toLocaleString("en-IN")} (${pct.toFixed(0)}% reached)`);
+      lines.push(`   • ${g.goal_name}: ₹${Math.round(cur).toLocaleString("en-IN")} / ₹${Math.round(tgt).toLocaleString("en-IN")} (${pct.toFixed(0)}% reached${g.deadline ? `, target date: ${g.deadline}` : ""})`);
     });
   }
 
@@ -442,6 +474,17 @@ export async function retrieveFinancialData(
       lines.push(`   • User asked: "${String(h.message || "").slice(0, 100)}"`);
       lines.push(`     Lumo responded: "${String(h.ai_response || "").slice(0, 140)}..."`);
     });
+  }
+
+  // Important instruction to the LLM
+  lines.push("");
+  lines.push("━━━ MANDATORY ACCURACY DIRECTIVE ━━━");
+  if (txs.length > 0) {
+    lines.push(`The user HAS logged ${txs.length} real transactions in the database (totaling ₹${Math.round(totalAllTimeExpenses).toLocaleString("en-IN")}).`);
+    lines.push("DO NOT say 'no expenses recorded' or 'you are flying blind'.");
+    lines.push(`Reference their real logged purchases (such as ${txs.slice(0, 4).map(t => `${t.title} for ₹${t.amount}`).join(", ")}) and their actual category totals!`);
+  } else {
+    lines.push("The user has 0 transactions logged. Encourage them to add their first transaction.");
   }
 
   return { snapshotText: lines.join("\n"), sources };

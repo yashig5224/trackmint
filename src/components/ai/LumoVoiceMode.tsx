@@ -472,12 +472,16 @@ const LumoVoiceMode = ({ open, onClose, tier, persona, selectedModel, onTranscri
     ];
 
     try {
+      const { data: authData } = await supabase.auth.getUser();
+      const currentUserId = authData?.user?.id;
+
       const { data, error } = await supabase.functions.invoke("ai-router", {
         body: {
           message: userText,
           model: selectedModel,
           persona,
           history: memory,
+          userId: currentUserId,
           context: {
             voiceSession: true,
             voiceProfile: lumoVoiceProfile,

@@ -572,12 +572,16 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
     const matchedLib = matchLibrary(text, persona.id);
 
     try {
+      const { data: authData } = await supabase.auth.getUser();
+      const currentUserId = authData?.user?.id;
+
       const { data, error } = await supabase.functions.invoke("ai-router", {
         body: {
           message: text,
           model: selectedModel,
           persona: { id: persona.id, name: persona.name },
           history: history.slice(-8).map((m) => ({ role: m.role, text: m.text })),
+          userId: currentUserId,
           ...(demoContext ? { context: demoContext, demo: true } : {}),
         },
       });

@@ -412,7 +412,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { message, persona = {}, history = [], context, model: requestedModel = "auto" } = body;
+    const { message, persona = {}, history = [], context, model: requestedModel = "auto", userId: bodyUserId } = body;
+    if (!userId && bodyUserId && typeof bodyUserId === "string") {
+      userId = bodyUserId;
+    }
     if (!message || typeof message !== "string") {
       return new Response(JSON.stringify({ error: "message required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
