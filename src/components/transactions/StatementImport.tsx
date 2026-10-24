@@ -50,6 +50,18 @@ export default function StatementImport({
   const [summary, setSummary] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [dragging, setDragging] = useState(false);
+  const [parseStep, setParseStep] = useState(0);
+
+  useEffect(() => {
+    if (stage !== "parsing") {
+      setParseStep(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setParseStep((prev) => (prev < 3 ? prev + 1 : prev));
+    }, 1200);
+    return () => clearInterval(interval);
+  }, [stage]);
 
   useEffect(() => {
     if (!open || !userId) return;
@@ -338,15 +350,61 @@ export default function StatementImport({
           )}
 
           {stage === "parsing" && (
-            <div className="py-20 text-center space-y-4">
-              <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
+            <div className="py-12 sm:py-16 text-center space-y-6 max-w-md mx-auto">
+              <div className="relative w-16 h-16 mx-auto">
+                <Loader2 className="w-16 h-16 text-primary animate-spin" strokeWidth={2} />
+                <Sparkles className="w-6 h-6 text-primary absolute inset-0 m-auto animate-pulse" />
+              </div>
+
               <div>
-                <h3 className="font-display text-lg font-bold text-foreground">
-                  Analyzing statement with AI…
+                <h3 className="font-display text-xl font-bold text-foreground">
+                  Analyzing {file?.name || "statement"}…
                 </h3>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
-                  Extracting dates, identifying merchants, filtering debit/credits, and categorizing spending.
+                <p className="text-xs text-muted-foreground mt-1">
+                  Using high-speed neural engine to parse and verify ledger rows
                 </p>
+              </div>
+
+              {/* Progress bar */}
+              <div className="w-full bg-muted/80 h-2 rounded-full overflow-hidden border border-border">
+                <motion.div
+                  className="bg-primary h-full rounded-full"
+                  initial={{ width: "15%" }}
+                  animate={{
+                    width: parseStep === 0 ? "35%" : parseStep === 1 ? "60%" : parseStep === 2 ? "85%" : "95%",
+                  }}
+                  transition={{ duration: 0.6, ease: "easeInOut" }}
+                />
+              </div>
+
+              {/* Active step indicator */}
+              <div className="space-y-2 text-left bg-muted/40 border border-border/60 rounded-2xl p-4 text-xs">
+                {[
+                  "Reading document & detecting structure",
+                  "AI extracting dates, merchants & amounts",
+                  "Auto-categorizing expenses & income",
+                  "Checking duplicates & compiling preview ledger",
+                ].map((stepText, idx) => {
+                  const done = parseStep > idx;
+                  const active = parseStep === idx;
+                  return (
+                    <div
+                      key={idx}
+                      className={`flex items-center gap-2.5 transition-colors ${
+                        done ? "text-primary font-medium" : active ? "text-foreground font-semibold" : "text-muted-foreground/60"
+                      }`}
+                    >
+                      {done ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                      ) : active ? (
+                        <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full border border-border shrink-0" />
+                      )}
+                      <span>{stepText}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

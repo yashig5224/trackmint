@@ -82,19 +82,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     console.log("🚀 AuthContext Mounted");
 
+    let lastLoadedUid: string | null = null;
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, sess) => {
-      console.log("🔐 AUTH EVENT:", event);
-      console.log("👤 SESSION:", sess);
-
       setSession(sess);
       setUser(sess?.user ?? null);
 
       if (sess?.user) {
-        // Critical: Supabase JS onAuthStateChange holds an internal lock.
-        // Awaiting queries synchronously inside onAuthStateChange deadlocks PostgREST.
-        // We push loadProfile to the next event loop tick and only then resolve loading = false.
+        if (sess.user.id === lastLoadedUid) {
+          setLoading(false);
+          return;
+        }
+        lastLoadedUid = sess.user.id;
         setTimeout(async () => {
           try {
             await loadProfile(sess.user.id);
@@ -103,35 +104,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         }, 0);
       } else {
+        lastLoadedUid = null;
         setProfile(null);
         setLoading(false);
       }
     });
-
-    const initializeAuth = async () => {
-      try {
-        const {
-          data: { session: sess },
-          error,
-        } = await supabase.auth.getSession();
-
-        console.log("📦 INITIAL SESSION:", sess);
-        console.log("📦 INITIAL SESSION ERROR:", error);
-
-        setSession(sess);
-        setUser(sess?.user ?? null);
-
-        if (sess?.user) {
-          await loadProfile(sess.user.id);
-        }
-      } catch (err) {
-        console.error("INITIAL SESSION FAILED:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializeAuth();
 
     return () => {
       subscription.unsubscribe();
