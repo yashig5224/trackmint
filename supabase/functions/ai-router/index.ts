@@ -9,6 +9,9 @@ import {
   PROVIDERS, allowedProviders, smartRoute, failoverChain, callProvider,
   ProviderError, type Provider, type PlanTier, type ChatMsg,
 } from "../_shared/ai-providers.ts";
+import {
+  buildHybridRAGContext, ensureKnowledgeBaseSeeded, type RetrievedSource,
+} from "../_shared/rag-service.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -401,6 +404,14 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Seed knowledge base on demand if requested
+    if (body?.seed_rag) {
+      const count = await ensureKnowledgeBaseSeeded(sb);
+      return new Response(JSON.stringify({ ok: true, seeded: count }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { message, persona = {}, history = [], context, model: requestedModel = "auto" } = body;
     if (!message || typeof message !== "string") {
       return new Response(JSON.stringify({ error: "message required" }), {
@@ -411,26 +422,20 @@ Deno.serve(async (req) => {
     const tier: PlanTier = await resolveTier(sb, userId);
     const allowed = allowedProviders(tier);
 
-    // ── Build snapshot (authed users get real data, demo gets client-provided)
-    let snapshotText: string;
-    if (userId) {
-      try {
-        const snap = await buildSnapshot(sb, userId, tier);
-        snapshotText = renderSnapshot(snap);
-      } catch (e) {
-        console.error("snapshot build failed", e);
-        snapshotText = "USER FINANCIAL SNAPSHOT: (unavailable — proceed with general guidance).";
-      }
-    } else if (context && typeof context === "object") {
-      const lines = ["USER FINANCIAL SNAPSHOT (demo mode):"];
-      if (context.monthlyIncome) lines.push(`- Monthly income: ₹${context.monthlyIncome}`);
-      if (context.totalSpent) lines.push(`- Spent this month: ₹${context.totalSpent}`);
-      if (context.topCategories?.length) lines.push(`- Top categories: ${context.topCategories.join(", ")}`);
-      if (context.goals?.length) lines.push(`- Active goals: ${context.goals.join("; ")}`);
-      snapshotText = lines.join("\n");
-    } else {
-      snapshotText = "USER FINANCIAL SNAPSHOT: (no data — demo / unauthenticated).";
+    // ── Execute Hybrid RAG (pgvector Semantic Search + SQL Financial Data Retrieval + Memory)
+    let ragContext;
+    try {
+      ragContext = await buildHybridRAGContext(sb, userId, message, context);
+    } catch (ragErr) {
+      console.warn("Hybrid RAG context error, using fallback:", ragErr);
+      ragContext = {
+        knowledgeChunks: [],
+        dataSources: [],
+        allSources: [],
+        promptContext: "HYBRID RAG CONTEXT: Proceed with general financial guidance.",
+      };
     }
+    const snapshotText = ragContext.promptContext;
 
     let primary: Provider;
     // "lumo" is the default UI model name — treat it as smart auto-routing
@@ -484,6 +489,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({
           text, provider, providerLabel: PROVIDERS[provider].label,
           model: PROVIDERS[provider].model, fallbackUsed: i > 0, tier, latencyMs: latency,
+          sources: ragContext.allSources,
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       } catch (e: any) {
         const status = e instanceof ProviderError ? e.status : 500;

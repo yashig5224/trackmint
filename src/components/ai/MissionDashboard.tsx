@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart, Bar, ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
-import { Mic, Send, LogOut, Settings, Sparkles, TrendingUp, AlertTriangle, Target, Copy, RotateCcw, ThumbsUp, ThumbsDown, Bookmark, Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeftOpen, Pin, Lock, Crown, Zap, Brain, Mic2, FileDown, LineChart as LineChartIcon, HeartHandshake, ChevronDown, Check } from "lucide-react";
+import { Mic, Send, LogOut, Settings, Sparkles, TrendingUp, AlertTriangle, Target, Copy, RotateCcw, ThumbsUp, ThumbsDown, Bookmark, Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeftOpen, Pin, Lock, Crown, Zap, Brain, Mic2, FileDown, LineChart as LineChartIcon, HeartHandshake, ChevronDown, Check, BookOpen, Database } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Persona } from "./PersonaSelection";
@@ -51,6 +51,15 @@ export interface ActionPayload {
   status?: "pending" | "applied" | "cancelled";
 }
 
+export interface RetrievedSource {
+  id: string;
+  title: string;
+  category: string;
+  type: "knowledge" | "financial_data";
+  snippet: string;
+  similarity?: number;
+}
+
 interface Message {
   id: number;
   role: "user" | "ai";
@@ -60,6 +69,7 @@ interface Message {
   insights?: Insight[];
   chips?: string[];
   action?: ActionPayload;
+  sources?: RetrievedSource[];
 }
 
 interface Insight {
@@ -600,6 +610,7 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
         id, role: "ai", text: "", fullText: cleanedText, streaming: true,
         insights: matchedLib?.insights, chips: chipPool(persona.id, history.length),
         action: parsedAction,
+        sources: data?.sources || [],
       };
       setIsTyping(false);
       setMessages((prev) => [...prev, aiMsg]);
@@ -983,6 +994,67 @@ const MissionDashboard = ({ persona, onBack }: MissionDashboardProps) => {
                           </div>
                         )}
                       </div>
+
+                      {/* RAG Grounding Sources & Citations */}
+                      {!msg.streaming && msg.sources && msg.sources.length > 0 && (
+                        <div className="pt-1">
+                          <details className="group rounded-2xl bg-white/90 border border-slate-200/90 shadow-xs p-3 transition-all text-xs backdrop-blur-md">
+                            <summary className="cursor-pointer list-none flex items-center justify-between font-semibold text-slate-700 select-none">
+                              <div className="flex items-center gap-2">
+                                <span className="flex h-5 px-1.5 items-center justify-center rounded-md bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-bold text-[10px] shadow-xs">
+                                  RAG
+                                </span>
+                                <span className="text-xs font-semibold text-slate-800">
+                                  Verified Sources & Financial Context
+                                </span>
+                                <span className="text-[11px] font-normal text-slate-400">
+                                  ({msg.sources.length})
+                                </span>
+                              </div>
+                              <span className="text-slate-400 group-open:rotate-180 transition-transform">
+                                <ChevronDown className="w-4 h-4" />
+                              </span>
+                            </summary>
+
+                            <div className="mt-3 space-y-2 pt-2.5 border-t border-slate-100">
+                              {msg.sources.map((s, idx) => (
+                                <div
+                                  key={s.id || idx}
+                                  className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200/70 flex flex-col gap-1 text-[11px]"
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-1.5 font-semibold text-slate-800 truncate">
+                                      {s.type === "knowledge" ? (
+                                        <BookOpen className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                      ) : (
+                                        <Database className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                      )}
+                                      <span className="truncate">{s.title}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider ${
+                                        s.type === "knowledge"
+                                          ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                                          : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                      }`}>
+                                        {s.type === "knowledge" ? "Vector Doc" : "SQL Data"}
+                                      </span>
+                                      {s.similarity !== undefined && s.similarity > 0 && (
+                                        <span className="text-[10px] font-medium text-slate-400" title="Semantic Cosine Similarity">
+                                          {(s.similarity * 100).toFixed(0)}% match
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <p className="text-slate-600 leading-relaxed font-normal">
+                                    {s.snippet}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        </div>
+                      )}
 
                       {/* Interactive Action Card */}
                       {!msg.streaming && msg.action && (

@@ -1,7 +1,7 @@
 // Multi-provider AI router — OpenAI, Gemini, Groq, OpenRouter
 // Uses YOUR API keys directly. No Lovable AI Gateway dependency.
 
-export type Provider = "openai" | "gemini" | "groq" | "openrouter";
+export type Provider = "openai" | "gemini" | "groq" | "openrouter" | "local";
 export type PlanTier = "free" | "pro" | "elite";
 
 export interface ProviderSpec {
@@ -16,16 +16,15 @@ export const PROVIDERS: Record<Provider, ProviderSpec> = {
   gemini:     { id: "gemini",     label: "Gemini",          model: "gemini-flash-latest", strength: "balanced"  },
   openai:     { id: "openai",     label: "OpenAI GPT",      model: "gpt-4o-mini",         strength: "analysis"  },
   openrouter: { id: "openrouter", label: "OpenRouter",      model: "meta-llama/llama-3.3-70b-instruct", strength: "reasoning" },
+  local:      { id: "local",      label: "Local / OSS LLM", model: "llama3.2",            strength: "reasoning" },
 };
 
 // Hard plan gates
-// FREE → Groq, Gemini (ultra fast + guaranteed uptime)
-// PRO  → Groq, Gemini, OpenRouter
-// ELITE → Groq, Gemini, OpenAI, OpenRouter
+const hasLocal = !!(Deno.env.get("LOCAL_LLM_URL") || Deno.env.get("OLLAMA_BASE_URL"));
 const TIER_PROVIDERS: Record<PlanTier, Provider[]> = {
-  free:  ["groq", "gemini"],
-  pro:   ["groq", "gemini", "openrouter"],
-  elite: ["groq", "gemini", "openai", "openrouter"],
+  free:  hasLocal ? ["local", "groq", "gemini"] : ["groq", "gemini"],
+  pro:   hasLocal ? ["local", "groq", "gemini", "openrouter"] : ["groq", "gemini", "openrouter"],
+  elite: hasLocal ? ["local", "groq", "gemini", "openai", "openrouter"] : ["groq", "gemini", "openai", "openrouter"],
 };
 
 export function allowedProviders(tier: PlanTier): Provider[] {
@@ -56,7 +55,10 @@ export function smartRoute(message: string, tier: PlanTier): Provider {
 
 // Failover chain: primary → next in priority order across all valid engines
 export function failoverChain(primary: Provider, tier: PlanTier): Provider[] {
-  const priority: Provider[] = ["groq", "gemini", "openai", "openrouter"];
+  const hasLocal = !!(Deno.env.get("LOCAL_LLM_URL") || Deno.env.get("OLLAMA_BASE_URL"));
+  const priority: Provider[] = hasLocal
+    ? ["local", "groq", "gemini", "openai", "openrouter"]
+    : ["groq", "gemini", "openai", "openrouter"];
   const chain = [primary, ...priority.filter((p) => p !== primary)];
   return Array.from(new Set(chain));
 }
@@ -184,8 +186,34 @@ async function callOpenRouter(messages: ChatMsg[]): Promise<CallResult> {
   return { text: data?.choices?.[0]?.message?.content ?? "", usage: data?.usage };
 }
 
+// ── Local / Self-Hosted Open-Weight LLM (Ollama / vLLM / OpenAI-compatible) ───
+async function callLocalLLM(messages: ChatMsg[]): Promise<CallResult> {
+  const url = Deno.env.get("LOCAL_LLM_URL") || Deno.env.get("OLLAMA_BASE_URL") || "http://127.0.0.1:11434/v1";
+  const model = Deno.env.get("LOCAL_LLM_MODEL") || "llama3.2";
+  const apiKey = Deno.env.get("LOCAL_LLM_API_KEY") || "ollama";
+  const endpoint = `${url.replace(/\/+$/, "")}/chat/completions`;
+
+  try {
+    const r = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ model, messages, stream: false }),
+    });
+    if (!r.ok) throw new ProviderError(r.status, await r.text());
+    const data = await r.json();
+    return { text: data?.choices?.[0]?.message?.content ?? "", usage: data?.usage };
+  } catch (err: any) {
+    if (err instanceof ProviderError) throw err;
+    throw new ProviderError(503, `Local LLM unreachable at ${endpoint}: ${err?.message || err}`);
+  }
+}
+
 export async function callProvider(provider: Provider, messages: ChatMsg[]): Promise<CallResult> {
   switch (provider) {
+    case "local":      return callLocalLLM(messages);
     case "openai":     return callOpenAI(messages);
     case "gemini":     return callGemini(messages);
     case "groq":       return callGroq(messages);
