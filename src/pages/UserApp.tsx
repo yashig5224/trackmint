@@ -29,6 +29,7 @@ import { useDemoMode } from "@/contexts/DemoModeContext";
 import { DEMO_TRANSACTIONS, DEMO_GOALS, DEMO_BUDGETS, DEMO_PROFILE } from "@/lib/demoData";
 import DemoPlanSwitcher from "@/components/demo/DemoPlanSwitcher";
 import StatementImport from "@/components/transactions/StatementImport";
+import TransactionsManager from "@/components/transactions/TransactionsManager";
 import TrackMintLogo from "@/assets/logo.png";
 
 type Tab = "overview" | "transactions" | "goals" | "reports" | "automation" | "settings";
@@ -315,7 +316,7 @@ const UserApp = () => {
                   </div>
                 )}
                 {tab === "transactions" && (
-                  <Transactions
+                  <TransactionsManager
                     transactions={transactions}
                     onAdd={() => setShowTxForm(true)}
                     onImport={() => {
@@ -325,7 +326,7 @@ const UserApp = () => {
                     onDelete={async (id) => {
                       if (!demo.isDemo) await supabase.from("transactions").delete().eq("id", id);
                       setTransactions(prev => prev.filter(t => t.id !== id));
-                      toast.success("Deleted");
+                      toast.success("Transaction removed");
                     }}
                     currency={currency}
                   />
@@ -544,8 +545,8 @@ const UserApp = () => {
           currency={currency}
           existing={transactions.map(t => ({ transaction_date: t.transaction_date, amount: Number(t.amount), title: t.title }))}
           onImported={async () => {
-            if (demo.isDemo || !auth.user) return;
-            const { data } = await supabase.from("transactions").select("*").eq("user_id", auth.user.id).order("transaction_date", { ascending: false });
+            if (demo.isDemo || !user) return;
+            const { data } = await supabase.from("transactions").select("*").eq("user_id", user.id).order("transaction_date", { ascending: false });
             if (data) setTransactions(data as Tx[]);
           }}
         />
@@ -601,45 +602,7 @@ const Overview = ({ stats, currency, persona, tier, onUpgrade, transactions, goa
   </div>
 );
 
-const Transactions = ({ transactions, onAdd, onImport, onDelete, currency }: any) => (
-  <div className="space-y-4">
-    <div className="flex items-center justify-between gap-2">
-      <h2 className="font-display text-xl font-bold text-gray-900">All Transactions</h2>
-      <div className="flex items-center gap-2">
-        <button onClick={onImport} className="bg-white border border-gray-200 text-gray-900 px-4 py-2.5 rounded-xl flex items-center gap-2 text-sm font-semibold hover:bg-gray-50 shadow-sm">
-          <Sparkles className="w-4 h-4 text-violet-500" /> Import Statement
-        </button>
-        <button onClick={onAdd} className="bg-gray-900 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 text-sm font-semibold hover:bg-gray-800 shadow-md">
-          <Plus className="w-4 h-4" /> Add
-        </button>
-      </div>
-    </div>
-    {transactions.length === 0 ? (
-      <div className="glass-card bg-white border border-gray-100 rounded-3xl p-12 text-center">
-        <Receipt className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-        <p className="text-gray-500">No transactions yet. Add your first to get started.</p>
-      </div>
-    ) : (
-      <div className="space-y-2">
-        {transactions.map((t: Tx) => (
-          <motion.div key={t.id} layout className="glass-card bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-4 group hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-white to-gray-50 border border-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
-              <img src={getCategoryIcon(t.category)} alt="" className="w-10 h-10 object-contain" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-gray-900 truncate">{t.title}</p>
-              <p className="text-xs text-gray-400">{t.category || "Uncategorized"} • {new Date(t.transaction_date).toLocaleDateString()}</p>
-            </div>
-            <p className={`font-display font-bold ${t.type === "income" ? "text-emerald-600" : "text-gray-900"}`}>
-              {t.type === "income" ? "+" : "-"}{fmt(Number(t.amount), currency)}
-            </p>
-            <button onClick={() => onDelete(t.id)} className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg hover:bg-rose-50 text-gray-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
-          </motion.div>
-        ))}
-      </div>
-    )}
-  </div>
-);
+const Transactions = TransactionsManager;
 
 const Goals = ({ goals, onAdd, onDelete, onContribute, currency }: any) => (
   <div className="space-y-4">
