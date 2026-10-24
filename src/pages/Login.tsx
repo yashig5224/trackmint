@@ -256,7 +256,14 @@ const Login = () => {
         setMode("in");
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Something went wrong";
+      let msg = err instanceof Error ? err.message : "Something went wrong";
+      if (msg.includes("Error sending recovery email") || msg.includes("unexpected_failure")) {
+        msg = "Unable to send recovery email. If you registered via Google, please sign in with 'Continue with Google'.";
+      } else if (msg.includes("Error sending confirmation email")) {
+        msg = "Email delivery failed. If you already registered via Google, please sign in with 'Continue with Google'.";
+      } else if (msg.includes("Invalid login credentials")) {
+        msg = "Invalid email or password. If you originally signed up with Google, please use 'Continue with Google'.";
+      }
       toast.error(msg);
     } finally {
       setSubmitting(false);
