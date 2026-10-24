@@ -41,11 +41,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log("🔍 Loading profile for:", uid);
 
-      const { data, error } = await supabase
+      const queryPromise = supabase
         .from("profiles")
         .select("*")
         .eq("id", uid)
         .maybeSingle();
+
+      const timeoutPromise = new Promise<{ data: null; error: Error }>((resolve) =>
+        setTimeout(() => resolve({ data: null, error: new Error("Profile fetch timeout") }), 5000)
+      );
+
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
       console.log("📄 PROFILE DATA:", data);
       console.log("❌ PROFILE ERROR:", error);
@@ -78,7 +84,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, sess) => {
+    } = supabase.auth.onAuthStateChange((event, sess) => {
       console.log("🔐 AUTH EVENT:", event);
       console.log("👤 SESSION:", sess);
 
@@ -86,12 +92,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(sess?.user ?? null);
 
       if (sess?.user) {
-        await loadProfile(sess.user.id);
+        // Critical: Supabase JS onAuthStateChange holds an internal lock.
+        // Awaiting queries synchronously inside onAuthStateChange deadlocks PostgREST.
+        // We push loadProfile to the next event loop tick and only then resolve loading = false.
+        setTimeout(async () => {
+          try {
+            await loadProfile(sess.user.id);
+          } finally {
+            setLoading(false);
+          }
+        }, 0);
       } else {
         setProfile(null);
+        setLoading(false);
       }
-
-      setLoading(false);
     });
 
     const initializeAuth = async () => {
