@@ -55,6 +55,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
+      if (!data) {
+        // Fallback: create default profile if missing
+        const { data: created } = await supabase
+          .from("profiles")
+          .insert({ id: uid, onboarding_completed: false })
+          .select("*")
+          .maybeSingle();
+        setProfile((created as Profile | null) ?? null);
+        return;
+      }
+
       setProfile((data as Profile | null) ?? null);
     } catch (err) {
       console.error("PROFILE FETCH FAILED:", err);
@@ -67,7 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, sess) => {
+    } = supabase.auth.onAuthStateChange(async (event, sess) => {
       console.log("🔐 AUTH EVENT:", event);
       console.log("👤 SESSION:", sess);
 
@@ -75,9 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(sess?.user ?? null);
 
       if (sess?.user) {
-        setTimeout(() => {
-          loadProfile(sess.user.id);
-        }, 0);
+        await loadProfile(sess.user.id);
       } else {
         setProfile(null);
       }
@@ -123,6 +132,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     console.log("🚪 Signing out");
+    sessionStorage.removeItem("trackmint_just_signed_up");
 
     await supabase.auth.signOut();
 

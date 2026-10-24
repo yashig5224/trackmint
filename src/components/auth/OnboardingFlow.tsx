@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Sparkles, User, Briefcase, Target, CreditCard, ChevronLeft, Wallet, Loader2 } from "lucide-react";
@@ -18,11 +18,19 @@ const QUESTIONS: Array<{
 
 export default function OnboardingFlow({ onComplete }: { onComplete?: () => void }) {
   const navigate = useNavigate();
-  const { user, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [inputValue, setInputValue] = useState("");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    // If user has already completed onboarding, redirect directly to /app
+    if (profile?.onboarding_completed) {
+      if (onComplete) onComplete();
+      else navigate("/app", { replace: true });
+    }
+  }, [profile, onComplete, navigate]);
 
   const currentQ = QUESTIONS[step];
   const progress = ((step + 1) / QUESTIONS.length) * 100;
@@ -39,6 +47,7 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
       onboarding_completed: true,
     }).eq("id", user.id);
     if (error) { toast.error(error.message); setSaving(false); return; }
+    sessionStorage.removeItem("trackmint_just_signed_up");
     await refreshProfile();
     toast.success("Welcome aboard!");
     if (onComplete) onComplete(); else navigate("/app", { replace: true });
@@ -81,7 +90,20 @@ export default function OnboardingFlow({ onComplete }: { onComplete?: () => void
         <div className="w-48 h-2 bg-gray-100 rounded-full overflow-hidden">
           <motion.div className="h-full bg-gray-900" initial={{ width: 0 }} animate={{ width: `${progress}%` }} />
         </div>
-        <div className="w-10" />
+        <button
+          onClick={async () => {
+            sessionStorage.removeItem("trackmint_just_signed_up");
+            if (user) {
+              await supabase.from("profiles").update({ onboarding_completed: true }).eq("id", user.id);
+              await refreshProfile();
+            }
+            if (onComplete) onComplete();
+            else navigate("/app", { replace: true });
+          }}
+          className="text-sm font-medium text-gray-400 hover:text-gray-900 transition-colors"
+        >
+          Skip
+        </button>
       </header>
 
       <div className="flex-1 flex flex-col justify-center px-6 pb-20 relative z-10 max-w-2xl w-full mx-auto">

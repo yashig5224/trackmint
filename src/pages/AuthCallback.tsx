@@ -10,6 +10,7 @@ export default function AuthCallback() {
       try {
         const url = new URL(window.location.href);
         const code = url.searchParams.get("code");
+        const type = url.searchParams.get("type"); // "signup" or "login"
 
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
@@ -32,14 +33,27 @@ export default function AuthCallback() {
 
         const { data: profile } = await supabase
           .from("profiles")
-          .select("onboarding_completed")
+          .select("onboarding_completed, monthly_income, primary_goal")
           .eq("id", user.id)
-          .single();
+          .maybeSingle();
 
+        // If user has already completed onboarding, always route directly to /app
         if (profile?.onboarding_completed) {
+          sessionStorage.removeItem("trackmint_just_signed_up");
           navigate("/app", { replace: true });
-        } else {
+          return;
+        }
+
+        // Only direct to /onboarding if user is a brand new signup who has not completed onboarding
+        const isSignup = type === "signup" || sessionStorage.getItem("trackmint_just_signed_up") === "true";
+        if (isSignup && !profile?.onboarding_completed) {
+          sessionStorage.removeItem("trackmint_just_signed_up");
           navigate("/onboarding", { replace: true });
+        } else {
+          // Returning user logging in: ensure onboarding_completed is true and send to /app
+          sessionStorage.removeItem("trackmint_just_signed_up");
+          await supabase.from("profiles").update({ onboarding_completed: true }).eq("id", user.id);
+          navigate("/app", { replace: true });
         }
       } catch (err) {
         console.error(err);

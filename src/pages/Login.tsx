@@ -179,15 +179,21 @@ const Login = () => {
     console.log("PROFILE:", profile);
     console.log("AUTH LOADING:", authLoading);
 
-    if (authLoading) return;
+    // Wait until auth and profile are fully resolved
+    if (authLoading || profile === undefined) return;
 
     if (user) {
       console.log("REDIRECTING USER");
+      const justSignedUp = sessionStorage.getItem("trackmint_just_signed_up") === "true";
 
-      if (profile?.onboarding_completed) {
-        navigate("/app", { replace: true });
-      } else {
+      // ONLY first-time users who just signed up AND have not completed onboarding
+      // should get directed to the onboarding details form.
+      // Returning users logging back in should always go straight to /app.
+      if (justSignedUp && profile?.onboarding_completed !== true) {
         navigate("/onboarding", { replace: true });
+      } else {
+        sessionStorage.removeItem("trackmint_just_signed_up");
+        navigate("/app", { replace: true });
       }
     }
   }, [user, profile, authLoading, navigate]);
@@ -197,11 +203,12 @@ const Login = () => {
     setSubmitting(true);
     try {
       if (mode === "up") {
-        const { error } = await supabase.auth.signUp({
+        sessionStorage.setItem("trackmint_just_signed_up", "true");
+        const { data: signUpData, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            emailRedirectTo: `${window.location.origin}/auth/callback?type=signup`,
             data: { full_name: fullName },
           },
         });
@@ -210,16 +217,36 @@ const Login = () => {
           sendEmail({
             to: email,
             templateName: "welcome",
-            data: { name: fullName, appUrl: `${window.location.origin}/auth/callback` },
+            data: { name: fullName, appUrl: `${window.location.origin}/auth/callback?type=signup` },
           }),
         ).catch(() => { });
+
+        // If email confirmation is disabled in Supabase, session is created right away
+        if (signUpData?.session) {
+          navigate("/onboarding", { replace: true });
+          return;
+        }
+
         toast.success(
           `Welcome${fullName ? ", " + fullName.split(" ")[0] : ""}! Check your email to confirm.`
         );
       } else if (mode === "in") {
+        // Clear any signup flag — user is intentionally logging in
+        sessionStorage.removeItem("trackmint_just_signed_up");
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Welcome back");
+
+        // Ensure returning user is marked as onboarded so protected routes never block them
+        const { data: u } = await supabase.auth.getUser();
+        if (u?.user?.id) {
+          await supabase
+            .from("profiles")
+            .update({ onboarding_completed: true })
+            .eq("id", u.user.id);
+        }
+        navigate("/app", { replace: true });
+        return;
       } else {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password`,
@@ -237,10 +264,17 @@ const Login = () => {
   };
 
   const handleGoogle = async () => {
+    const isSignup = mode === "up";
+    if (isSignup) {
+      sessionStorage.setItem("trackmint_just_signed_up", "true");
+    } else {
+      sessionStorage.removeItem("trackmint_just_signed_up");
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback?type=${isSignup ? "signup" : "login"}`,
       },
     });
 
