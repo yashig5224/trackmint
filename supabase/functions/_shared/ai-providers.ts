@@ -43,8 +43,8 @@ export function smartRoute(message: string, tier: PlanTier): Provider {
   const pick = (p: Provider, fallback: Provider): Provider =>
     allowed.includes(p) ? p : fallback;
 
-  // Financial analysis → Gemini / Groq
-  if (wantsAnalysis) return pick("gemini", "groq");
+  // Financial analysis & reasoning → Groq (sub-second OSS) with Gemini fallback
+  if (wantsAnalysis) return pick("groq", "gemini");
   // Fast responses → Groq
   if (wantsSpeed) return pick("groq", "gemini");
   // Reasoning → Groq

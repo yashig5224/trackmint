@@ -45,18 +45,23 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 
   if (hfKey) {
     try {
-      // Primary: Hugging Face Inference API
+      // Primary: Hugging Face Inference API with 2s strict timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+
       const res = await fetch(`https://api-inference.huggingface.co/pipeline/feature-extraction/${HF_EMBED_MODEL}`, {
         method: "POST",
+        signal: controller.signal,
         headers: {
           Authorization: `Bearer ${hfKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           inputs: cleanText,
-          options: { wait_for_model: true },
+          options: { wait_for_model: false },
         }),
       });
+      clearTimeout(timeoutId);
 
       if (res.ok) {
         const raw = await res.json();
@@ -452,10 +457,7 @@ export async function buildHybridRAGContext(
   message: string,
   demoContext?: any
 ): Promise<HybridRAGContext> {
-  // 1. Ensure seed knowledge is populated
-  await ensureKnowledgeBaseSeeded(sb);
-
-  // 2. Semantic vector search for relevant financial knowledge
+  // 1. Semantic vector search for relevant financial knowledge
   const knowledgeChunks = await retrieveSemanticKnowledge(sb, message, 4);
 
   // 3. Structured SQL data retrieval for authenticated users
