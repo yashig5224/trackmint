@@ -103,7 +103,16 @@ export default function StatementImport({
         },
       });
 
-      if (error) throw new Error(error.message);
+      if (error) {
+        let msg = error.message;
+        try {
+          if ((error as any).context && typeof (error as any).context.json === "function") {
+            const ctx = await (error as any).context.json();
+            if (ctx?.error) msg = ctx.error;
+          }
+        } catch {}
+        throw new Error(msg);
+      }
       if ((data as any)?.error) throw new Error((data as any).error);
 
       const parsed = ((data as any).transactions || []) as Parsed[];

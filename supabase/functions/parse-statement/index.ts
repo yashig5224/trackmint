@@ -60,7 +60,7 @@ const RESPONSE_SCHEMA = {
           amount: { type: "number" },
           type: { type: "string", enum: ["income", "expense", "transfer"] },
           category: { type: "string" },
-          balance: { type: ["number", "null"] },
+          balance: { type: "number", nullable: true },
           recurring: { type: "boolean" },
         },
         required: ["date", "description", "amount", "type", "category"],
@@ -93,17 +93,10 @@ Deno.serve(async (req) => {
       userId = String(body.userId);
     }
 
-    const apiKey = Deno.env.get("GEMINI_API_KEY");
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: "Statement parsing not configured (GEMINI_API_KEY missing)" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const { fileBase64, fileName, mimeType } = body;
     if (!fileBase64 || !fileName) {
       return new Response(JSON.stringify({ error: "fileBase64 and fileName required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -115,79 +108,187 @@ Deno.serve(async (req) => {
     else if (lowerName.endsWith(".webp")) mt = "image/webp";
     else if (lowerName.endsWith(".csv") || lowerName.endsWith(".txt")) mt = "text/plain";
 
-    // Build multimodal payload
-    let parts: any[] = [];
-    if (mt === "text/plain") {
-      let textContent = "";
+    const isText = mt === "text/plain";
+    let textContent = "";
+    if (isText) {
       try {
         textContent = atob(fileBase64);
       } catch {
         textContent = fileBase64;
       }
-      parts = [
-        { text: `${SYSTEM_PROMPT}\n\nStatement filename: ${fileName}.\n\nRaw CSV/Text Content:\n${textContent.slice(0, 40000)}\n\nExtract ALL transactions as JSON.` }
-      ];
-    } else {
-      parts = [
-        { text: `${SYSTEM_PROMPT}\n\nParse this statement file: ${fileName}. Extract ALL transactions as JSON matching the schema.` },
-        { inline_data: { mime_type: mt, data: fileBase64 } },
-      ];
     }
 
-    const geminiBody = {
-      contents: [{ role: "user", parts }],
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: RESPONSE_SCHEMA,
-        temperature: 0.1,
-      },
-    };
-
-    // Candidate Gemini models with auto-failover
-    const candidateModels = [
-      "gemini-2.5-flash",
-      "gemini-flash-latest",
-      "gemini-1.5-flash",
-      "gemini-2.0-flash",
-      "gemini-1.5-pro",
-    ];
-
-    let lastError = "";
     let parsed: any = null;
+    let lastError = "";
 
-    for (const model of candidateModels) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-        const aiRes = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(geminiBody),
-        });
+    // 1. Try Google Gemini (Native multimodal PDF, Images, and Text)
+    const geminiKey = Deno.env.get("GEMINI_API_KEY");
+    if (geminiKey) {
+      let parts: any[] = [];
+      if (isText) {
+        parts = [
+          { text: `${SYSTEM_PROMPT}\n\nStatement filename: ${fileName}.\n\nRaw CSV/Text Content:\n${textContent.slice(0, 50000)}\n\nExtract ALL transactions as JSON.` }
+        ];
+      } else {
+        parts = [
+          { text: `${SYSTEM_PROMPT}\n\nParse this bank/card statement file: ${fileName}. Extract ALL transactions as JSON matching the schema.` },
+          { inlineData: { mimeType: mt, data: fileBase64 } },
+        ];
+      }
 
-        if (!aiRes.ok) {
-          const errText = await aiRes.text();
-          lastError = `${model}: ${aiRes.status} ${errText.slice(0, 200)}`;
-          continue;
-        }
+      const geminiBody = {
+        contents: [{ role: "user", parts }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: RESPONSE_SCHEMA,
+          temperature: 0.1,
+        },
+      };
 
-        const aiJson = await aiRes.json();
-        const content = aiJson?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (typeof content === "string") {
-          try {
-            parsed = JSON.parse(content);
-            if (parsed && Array.isArray(parsed.transactions)) break;
-          } catch {
-            const m = content.match(/\{[\s\S]*\}/);
-            if (m) {
-              try {
-                parsed = JSON.parse(m[0]);
-                if (parsed && Array.isArray(parsed.transactions)) break;
-              } catch {}
+      const candidateModels = [
+        "gemini-flash-latest",
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-1.5-flash",
+        "gemini-2.0-flash",
+      ];
+
+      for (const model of candidateModels) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+          const aiRes = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(geminiBody),
+          });
+
+          if (!aiRes.ok) {
+            const errText = await aiRes.text();
+            lastError = `${model}: ${aiRes.status} ${errText.slice(0, 200)}`;
+            console.log(`[Gemini ${model} failed]:`, aiRes.status, errText);
+            continue;
+          }
+
+          const aiJson = await aiRes.json();
+          const content = aiJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (typeof content === "string") {
+            try {
+              parsed = JSON.parse(content);
+              if (parsed && Array.isArray(parsed.transactions)) break;
+            } catch {
+              const m = content.match(/\{[\s\S]*\}/);
+              if (m) {
+                try {
+                  parsed = JSON.parse(m[0]);
+                  if (parsed && Array.isArray(parsed.transactions)) break;
+                } catch {}
+              }
             }
           }
+        } catch (err) {
+          lastError = String(err);
         }
-      } catch (err) {
-        lastError = String(err);
+      }
+    }
+
+    // 2. Fallback to OpenAI (gpt-4o-mini supports images + text)
+    const openAiKey = Deno.env.get("OPENAI_API_KEY");
+    if ((!parsed || !Array.isArray(parsed.transactions)) && openAiKey) {
+      try {
+        const userContent: any[] = [];
+        if (isText) {
+          userContent.push({
+            type: "text",
+            text: `Statement filename: ${fileName}.\n\nRaw CSV/Text:\n${textContent.slice(0, 50000)}`,
+          });
+        } else if (mt.startsWith("image/")) {
+          userContent.push({
+            type: "image_url",
+            image_url: { url: `data:${mt};base64,${fileBase64}` },
+          });
+          userContent.push({
+            type: "text",
+            text: `Statement image: ${fileName}. Extract all transactions.`,
+          });
+        }
+
+        if (userContent.length > 0) {
+          const oaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${openAiKey}`,
+            },
+            body: JSON.stringify({
+              model: "gpt-4o-mini",
+              response_format: { type: "json_object" },
+              temperature: 0.1,
+              messages: [
+                { role: "system", content: `${SYSTEM_PROMPT}\n\nYou must return a JSON object with: { "bank": string, "transactions": [ { "date": "YYYY-MM-DD", "description": string, "merchant": string, "amount": number, "type": "income"|"expense"|"transfer", "category": string, "balance": number|null, "recurring": boolean } ] }` },
+                { role: "user", content: userContent },
+              ],
+            }),
+          });
+
+          if (oaiRes.ok) {
+            const oaiJson = await oaiRes.json();
+            const text = oaiJson.choices?.[0]?.message?.content;
+            if (text) {
+              const oaiParsed = JSON.parse(text);
+              if (oaiParsed && Array.isArray(oaiParsed.transactions)) {
+                parsed = oaiParsed;
+              }
+            }
+          } else {
+            const errText = await oaiRes.text();
+            console.log("[OpenAI failed]:", oaiRes.status, errText);
+          }
+        }
+      } catch (e) {
+        lastError = `OpenAI fallback error: ${String(e)}`;
+      }
+    }
+
+    // 3. Fallback to Groq for CSV / Text
+    const groqKey = Deno.env.get("GROQ_API_KEY");
+    if ((!parsed || !Array.isArray(parsed.transactions)) && isText && groqKey) {
+      const groqCandidates = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.3-70b-versatile"];
+      for (const gm of groqCandidates) {
+        try {
+          const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${groqKey}`,
+            },
+            body: JSON.stringify({
+              model: gm,
+              response_format: { type: "json_object" },
+              temperature: 0.1,
+              messages: [
+                { role: "system", content: `${SYSTEM_PROMPT}\n\nReturn JSON: { "bank": string, "transactions": [ { "date": "YYYY-MM-DD", "description": string, "merchant": string, "amount": number, "type": "income"|"expense"|"transfer", "category": string, "balance": number|null, "recurring": boolean } ] }` },
+                { role: "user", content: `Statement: ${fileName}\nContent:\n${textContent.slice(0, 40000)}` },
+              ],
+            }),
+          });
+
+          if (groqRes.ok) {
+            const gJson = await groqRes.json();
+            const text = gJson.choices?.[0]?.message?.content;
+            if (text) {
+              const gParsed = JSON.parse(text);
+              if (gParsed && Array.isArray(gParsed.transactions)) {
+                parsed = gParsed;
+                break;
+              }
+            }
+          } else {
+            const errText = await groqRes.text();
+            console.log(`[Groq ${gm} failed]:`, groqRes.status, errText);
+          }
+        } catch (e) {
+          lastError = `Groq fallback error: ${String(e)}`;
+        }
       }
     }
 
@@ -195,7 +296,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({
         error: `Could not parse statement: ${lastError || "No valid transactions extracted."}`
       }), {
-        status: 502,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -224,7 +325,7 @@ Deno.serve(async (req) => {
 
   } catch (e) {
     return new Response(JSON.stringify({ error: (e as Error).message }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
