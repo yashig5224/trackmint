@@ -143,8 +143,28 @@ export default function StatementImport({
       setRows(flagged);
       setMeta({ bank: (data as any).bank, period: (data as any).period });
       setStage("preview");
-      toast.success(`Extracted ${parsed.length} transactions from ${f.name}!`);
     } catch (e: any) {
+      // If server returned an error but file is text or CSV, attempt client-side recovery
+      if (isCsv || isText) {
+        try {
+          const text = await f.text();
+          const localRows = parseCsvClientSide(text);
+          if (localRows.length > 0) {
+            const existingKeys = new Set(existing.map((ex) => keyFor(ex.transaction_date, ex.amount, ex.title)));
+            const flagged = localRows.map((r) => ({
+              ...r,
+              _dup: existingKeys.has(keyFor(r.date, r.amount, r.merchant || r.description)),
+              _skip: false,
+            }));
+            setRows(flagged);
+            setMeta({ bank: "CSV Statement", period: null });
+            setStage("preview");
+            toast.success(`Extracted ${localRows.length} transactions via local parser!`);
+            return;
+          }
+        } catch {}
+      }
+
       toast.error(e.message || "Failed to parse statement");
       setStage("upload");
     }
@@ -640,4 +660,69 @@ function buildSummary(txns: Parsed[]) {
   const topMerchant = Object.entries(merchMap).sort((a, b) => b[1] - a[1])[0]?.[0];
   const subscriptions = txns.filter((t) => t.recurring).map((t) => t.merchant || t.description).slice(0, 8);
   return { income, expenses, savingsRate, largest, topCategory, topMerchant, subscriptions };
+}
+
+function parseCsvClientSide(text: string): Parsed[] {
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const rows: Parsed[] = [];
+  const dateRegex = /\b(\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]\d{2,4})\b/;
+
+  for (const line of lines) {
+    const dMatch = line.match(dateRegex);
+    if (!dMatch) continue;
+
+    const numMatches = line.match(/(?:INR|Rs\.?|₹)?\s*([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)/g);
+    if (!numMatches || numMatches.length === 0) continue;
+
+    const nums: number[] = [];
+    for (const nm of numMatches) {
+      const clean = nm.replace(/[^0-9.]/g, "");
+      const val = parseFloat(clean);
+      if (!isNaN(val) && val > 0 && val < 50000000) nums.push(val);
+    }
+    if (nums.length === 0) continue;
+
+    const amount = nums[0];
+    const isCredit = /\b(cr|credit|deposit|received|inward|refund)\b/i.test(line);
+    const type: "income" | "expense" | "transfer" = isCredit ? "income" : "expense";
+
+    let desc = line
+      .replace(dMatch[0], "")
+      .replace(/[0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?/g, "")
+      .replace(/[,;|\t]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!desc || desc.length < 2) desc = "Bank Transaction";
+
+    let isoDate = "";
+    try {
+      const dStr = dMatch[1].replace(/-/g, "/");
+      const parts = dStr.split("/");
+      if (parts.length === 3) {
+        if (parts[0].length === 4) {
+          isoDate = `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].padStart(2, "0")}`;
+        } else {
+          const yr = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+          isoDate = `${yr}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+        }
+      }
+    } catch {
+      isoDate = new Date().toISOString().slice(0, 10);
+    }
+
+    if (isoDate && amount > 0) {
+      rows.push({
+        date: isoDate,
+        description: desc.slice(0, 80),
+        merchant: desc.split(/[-_/|]/)[0].trim().slice(0, 30) || "Merchant",
+        amount,
+        type,
+        category: type === "income" ? "Salary" : "Other",
+        balance: nums.length > 1 ? nums[nums.length - 1] : null,
+        recurring: false,
+      });
+    }
+  }
+
+  return rows;
 }

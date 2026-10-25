@@ -88,8 +88,8 @@ const RESPONSE_SCHEMA = {
   required: ["transactions"],
 };
 
-// Fast PDF text extractor (under 1ms)
-function extractTextFromPdfBase64(b64: string): string {
+// Fast PDF text extractor with decompression support
+async function extractTextFromPdfBase64(b64: string): Promise<string> {
   try {
     const raw = atob(b64);
     const textParts: string[] = [];
@@ -112,10 +112,117 @@ function extractTextFromPdfBase64(b64: string): string {
       if (line.trim().length > 0) textParts.push(line);
     }
 
+    // If stream compressed, try decompressing FlateDecode blocks
+    if (textParts.join(" ").length < 80) {
+      const streamRegex = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+      let sMatch;
+      let streamCount = 0;
+      while ((sMatch = streamRegex.exec(raw)) !== null && streamCount < 20) {
+        streamCount++;
+        const streamData = sMatch[1];
+        const sBytes = new Uint8Array(streamData.length);
+        for (let j = 0; j < streamData.length; j++) sBytes[j] = streamData.charCodeAt(j);
+
+        for (const format of ["deflate", "deflate-raw"] as const) {
+          try {
+            const ds = new DecompressionStream(format);
+            const writer = ds.writable.getWriter();
+            writer.write(sBytes);
+            writer.close();
+            const decompressed = await new Response(ds.readable).arrayBuffer();
+            const decText = new TextDecoder("utf-8", { fatal: false }).decode(decompressed);
+
+            let subMatch;
+            while ((subMatch = tjRegex.exec(decText)) !== null) {
+              if (subMatch[1]?.length > 0) textParts.push(subMatch[1].replace(/\\([()\\])/g, "$1"));
+            }
+            while ((subMatch = arrayTjRegex.exec(decText)) !== null) {
+              const parts = subMatch[1].match(/\(([^()\\]*(?:\\.[^()\\]*)*)\)/g) || [];
+              const line = parts.map((p) => p.slice(1, -1).replace(/\\([()\\])/g, "$1")).join("");
+              if (line.trim().length > 0) textParts.push(line);
+            }
+            break;
+          } catch {}
+        }
+      }
+    }
+
     return textParts.join("\n");
   } catch {
     return "";
   }
+}
+
+// Deterministic tabular parser for CSV, TSV, or structured lines
+function parseDeterministicTransactions(text: string): any[] {
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const results: any[] = [];
+  const dateRegex = /\b(\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]\d{2,4})\b/;
+
+  for (const line of lines) {
+    const dMatch = line.match(dateRegex);
+    if (!dMatch) continue;
+
+    // Extract numbers with possible decimal
+    const numMatches = line.match(/(?:INR|Rs\.?|₹)?\s*([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)/g);
+    if (!numMatches || numMatches.length === 0) continue;
+
+    const nums: number[] = [];
+    for (const nm of numMatches) {
+      const clean = nm.replace(/[^0-9.]/g, "");
+      const val = parseFloat(clean);
+      if (!isNaN(val) && val > 0 && val < 50000000) nums.push(val);
+    }
+    if (nums.length === 0) continue;
+
+    const amount = nums[0];
+    const balance = nums.length > 1 ? nums[nums.length - 1] : null;
+
+    // Detect credit vs debit
+    const isCredit = /\b(cr|credit|deposit|received|inward|refund)\b/i.test(line);
+    const type = isCredit ? "income" : "expense";
+
+    // Clean description
+    let desc = line
+      .replace(dMatch[0], "")
+      .replace(/[0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?/g, "")
+      .replace(/[,;|\t]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!desc || desc.length < 2) desc = "Bank Transaction";
+
+    // Standardise date
+    let isoDate = "";
+    try {
+      const dStr = dMatch[1].replace(/-/g, "/");
+      const parts = dStr.split("/");
+      if (parts.length === 3) {
+        if (parts[0].length === 4) {
+          isoDate = `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].padStart(2, "0")}`;
+        } else {
+          const yr = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+          isoDate = `${yr}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+        }
+      }
+    } catch {
+      isoDate = new Date().toISOString().slice(0, 10);
+    }
+
+    if (isoDate && amount > 0) {
+      results.push({
+        date: isoDate,
+        description: desc.slice(0, 80),
+        merchant: desc.split(/[-_/|]/)[0].trim().slice(0, 30) || "Merchant",
+        amount,
+        type,
+        category: type === "income" ? "Salary" : "Other",
+        balance,
+        recurring: false,
+      });
+    }
+  }
+
+  return results;
 }
 
 Deno.serve(async (req) => {
@@ -171,7 +278,7 @@ Deno.serve(async (req) => {
         textContent = fileBase64;
       }
     } else if (isPdf) {
-      const extracted = extractTextFromPdfBase64(fileBase64);
+      const extracted = await extractTextFromPdfBase64(fileBase64);
       if (extracted.trim().length > 40) {
         textContent = extracted;
       }
@@ -184,11 +291,12 @@ Deno.serve(async (req) => {
 
     const groqKey = Deno.env.get("GROQ_API_KEY");
     const openAiKey = Deno.env.get("OPENAI_API_KEY");
+    const openRouterKey = Deno.env.get("OPENROUTER_API_KEY");
     const geminiKey = Deno.env.get("GEMINI_API_KEY");
 
     // ── 1. If text is available (CSV, TXT, or text PDF): Use Groq (sub-second) ──
     if (hasText && groqKey) {
-      const groqModels = ["openai/gpt-oss-120b", "openai/gpt-oss-20b"];
+      const groqModels = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
       for (const gm of groqModels) {
         try {
           const t0 = Date.now();
@@ -207,7 +315,7 @@ Deno.serve(async (req) => {
                 { role: "user", content: `Filename: ${fileName}\n\nStatement Content:\n${textContent.slice(0, 50000)}` },
               ],
             }),
-            signal: AbortSignal.timeout(10000),
+            signal: AbortSignal.timeout(9000),
           });
 
           if (groqRes.ok) {
@@ -230,8 +338,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── 2. Fallback to OpenAI gpt-4o-mini (Supports text & images, ~1.2s) ──
-    if ((!parsed || !Array.isArray(parsed.transactions)) && openAiKey) {
+    // ── 2. OpenAI (gpt-4o-mini supports text & images, fast & reliable) ──
+    if ((!parsed || !Array.isArray(parsed.transactions) || parsed.transactions.length === 0) && openAiKey) {
       try {
         const t0 = Date.now();
         const userContent: any[] = [];
@@ -264,10 +372,10 @@ Deno.serve(async (req) => {
               temperature: 0.1,
               messages: [
                 { role: "system", content: SYSTEM_PROMPT },
-                { role: "user", userContent },
+                { role: "user", content: userContent },
               ],
             }),
-            signal: AbortSignal.timeout(12000),
+            signal: AbortSignal.timeout(10000),
           });
 
           if (oaiRes.ok) {
@@ -289,8 +397,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── 3. Fallback to Google Gemini (Native multimodal PDF & images) ──
-    if ((!parsed || !Array.isArray(parsed.transactions)) && geminiKey) {
+    // ── 3. Google Gemini (Native multimodal PDF & images) ──
+    if ((!parsed || !Array.isArray(parsed.transactions) || parsed.transactions.length === 0) && geminiKey) {
       const parts: any[] = [];
       if (hasText) {
         parts.push({
@@ -314,7 +422,7 @@ Deno.serve(async (req) => {
         },
       };
 
-      const candidateModels = ["gemini-3.5-flash", "gemini-3.7-flash", "gemini-3.8-flash", "gemini-flash-latest"];
+      const candidateModels = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite"];
       for (const model of candidateModels) {
         try {
           const t0 = Date.now();
@@ -324,12 +432,11 @@ Deno.serve(async (req) => {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(geminiBody),
-              signal: AbortSignal.timeout(15000),
+              signal: AbortSignal.timeout(8000),
             }
           );
 
           if (!aiRes.ok) {
-            const errText = await aiRes.text();
             errors.push(`${model}: ${aiRes.status}`);
             continue;
           }
@@ -339,7 +446,7 @@ Deno.serve(async (req) => {
           if (typeof content === "string") {
             try {
               const resObj = JSON.parse(content);
-              if (resObj && Array.isArray(resObj.transactions)) {
+              if (resObj && Array.isArray(resObj.transactions) && resObj.transactions.length > 0) {
                 parsed = resObj;
                 providerUsed = `Gemini ${model} (${Date.now() - t0}ms)`;
                 break;
@@ -348,7 +455,7 @@ Deno.serve(async (req) => {
               const m = content.match(/\{[\s\S]*\}/);
               if (m) {
                 const resObj = JSON.parse(m[0]);
-                if (resObj && Array.isArray(resObj.transactions)) {
+                if (resObj && Array.isArray(resObj.transactions) && resObj.transactions.length > 0) {
                   parsed = resObj;
                   providerUsed = `Gemini ${model} (${Date.now() - t0}ms)`;
                   break;
@@ -362,9 +469,63 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (!parsed || !Array.isArray(parsed.transactions)) {
+    // ── 4. OpenRouter Fallback ──
+    if ((!parsed || !Array.isArray(parsed.transactions) || parsed.transactions.length === 0) && openRouterKey && hasText) {
+      try {
+        const t0 = Date.now();
+        const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${openRouterKey}`,
+            "HTTP-Referer": "https://trackmint-ashen.vercel.app",
+            "X-Title": "TrackMint",
+          },
+          body: JSON.stringify({
+            model: "meta-llama/llama-3.3-70b-instruct",
+            response_format: { type: "json_object" },
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              { role: "user", content: `Filename: ${fileName}\n\nStatement Content:\n${textContent.slice(0, 50000)}` },
+            ],
+          }),
+          signal: AbortSignal.timeout(10000),
+        });
+
+        if (orRes.ok) {
+          const orJson = await orRes.json();
+          const text = orJson.choices?.[0]?.message?.content;
+          if (text) {
+            const resObj = JSON.parse(text);
+            if (resObj && Array.isArray(resObj.transactions) && resObj.transactions.length > 0) {
+              parsed = resObj;
+              providerUsed = `OpenRouter (${Date.now() - t0}ms)`;
+            }
+          }
+        }
+      } catch (e: any) {
+        errors.push(`OpenRouter: ${e.message}`);
+      }
+    }
+
+    // ── 5. Deterministic fallback if text exists and AI providers failed ──
+    if ((!parsed || !Array.isArray(parsed.transactions) || parsed.transactions.length === 0) && (hasText || isText)) {
+      const fallbackRows = parseDeterministicTransactions(textContent);
+      if (fallbackRows.length > 0) {
+        parsed = {
+          bank: "Imported Statement",
+          accountHint: null,
+          currency: "INR",
+          period: null,
+          transactions: fallbackRows,
+        };
+        providerUsed = "Deterministic Parser";
+      }
+    }
+
+    if (!parsed || !Array.isArray(parsed.transactions) || parsed.transactions.length === 0) {
       return new Response(JSON.stringify({
-        error: `Could not parse statement: ${errors.join(" | ") || "No valid transactions extracted."}`
+        error: `Could not parse statement: ${errors.join(" | ") || "No valid transactions could be extracted from this document."}`
       }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -12,11 +12,11 @@ export interface ProviderSpec {
 }
 
 export const PROVIDERS: Record<Provider, ProviderSpec> = {
-  groq:       { id: "groq",       label: "Groq (GPT-OSS)",  model: "openai/gpt-oss-120b", strength: "speed"     },
-  gemini:     { id: "gemini",     label: "Gemini",          model: "gemini-flash-latest", strength: "balanced"  },
-  openai:     { id: "openai",     label: "OpenAI GPT",      model: "gpt-4o-mini",         strength: "analysis"  },
+  groq:       { id: "groq",       label: "Groq (Llama 3.3)", model: "llama-3.3-70b-versatile", strength: "speed"     },
+  gemini:     { id: "gemini",     label: "Gemini 2.0",       model: "gemini-2.0-flash",         strength: "balanced"  },
+  openai:     { id: "openai",     label: "OpenAI GPT",      model: "gpt-4o-mini",              strength: "analysis"  },
   openrouter: { id: "openrouter", label: "OpenRouter",      model: "meta-llama/llama-3.3-70b-instruct", strength: "reasoning" },
-  local:      { id: "local",      label: "Local / OSS LLM", model: "llama3.2",            strength: "reasoning" },
+  local:      { id: "local",      label: "Local / OSS LLM", model: "llama3.2",                 strength: "reasoning" },
 };
 
 // Hard plan gates
@@ -98,7 +98,7 @@ async function callOpenAI(messages: ChatMsg[]): Promise<CallResult> {
 async function callGemini(messages: ChatMsg[]): Promise<CallResult> {
   const key = Deno.env.get("GEMINI_API_KEY");
   if (!key) throw new ProviderError(500, "GEMINI_API_KEY missing");
-  const candidateModels = ["gemini-flash-latest", "gemini-3.8-flash", "gemini-2.5-flash-lite", "gemini-3.5-flash"];
+  const candidateModels = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite"];
   let lastErr = "";
   let lastStatus = 500;
 
@@ -141,7 +141,7 @@ async function callGemini(messages: ChatMsg[]): Promise<CallResult> {
 async function callGroq(messages: ChatMsg[]): Promise<CallResult> {
   const key = Deno.env.get("GROQ_API_KEY");
   if (!key) throw new ProviderError(500, "GROQ_API_KEY missing");
-  const candidateModels = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"];
+  const candidateModels = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
   let lastErr = "";
   let lastStatus = 500;
 
