@@ -98,7 +98,7 @@ async function callOpenAI(messages: ChatMsg[]): Promise<CallResult> {
 async function callGemini(messages: ChatMsg[]): Promise<CallResult> {
   const key = Deno.env.get("GEMINI_API_KEY");
   if (!key) throw new ProviderError(500, "GEMINI_API_KEY missing");
-  const candidateModels = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite"];
+  const candidateModels = ["gemini-2.5-flash-lite", "gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-3.5-flash-lite", "gemini-flash-latest"];
   let lastErr = "";
   let lastStatus = 500;
 
@@ -141,7 +141,7 @@ async function callGemini(messages: ChatMsg[]): Promise<CallResult> {
 async function callGroq(messages: ChatMsg[]): Promise<CallResult> {
   const key = Deno.env.get("GROQ_API_KEY");
   if (!key) throw new ProviderError(500, "GROQ_API_KEY missing");
-  const candidateModels = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
+  const candidateModels = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"];
   let lastErr = "";
   let lastStatus = 500;
 

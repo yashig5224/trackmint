@@ -163,8 +163,11 @@ function parseDeterministicTransactions(text: string): any[] {
     const dMatch = line.match(dateRegex);
     if (!dMatch) continue;
 
+    // Strip date string FIRST so year (e.g. 2026) is NOT extracted as an amount!
+    const lineWithoutDate = line.replace(dMatch[0], " ");
+
     // Extract numbers with possible decimal
-    const numMatches = line.match(/(?:INR|Rs\.?|₹)?\s*([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)/g);
+    const numMatches = lineWithoutDate.match(/(?:INR|Rs\.?|₹)?\s*([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)/g);
     if (!numMatches || numMatches.length === 0) continue;
 
     const nums: number[] = [];
@@ -183,8 +186,7 @@ function parseDeterministicTransactions(text: string): any[] {
     const type = isCredit ? "income" : "expense";
 
     // Clean description
-    let desc = line
-      .replace(dMatch[0], "")
+    let desc = lineWithoutDate
       .replace(/[0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?/g, "")
       .replace(/[,;|\t]/g, " ")
       .replace(/\s+/g, " ")
@@ -294,9 +296,28 @@ Deno.serve(async (req) => {
     const openRouterKey = Deno.env.get("OPENROUTER_API_KEY");
     const geminiKey = Deno.env.get("GEMINI_API_KEY");
 
+    if (body?.probe_models) {
+      const probeRes: any = {};
+      if (groqKey) {
+        try {
+          const r = await fetch("https://api.groq.com/openai/v1/models", { headers: { Authorization: `Bearer ${groqKey}` } });
+          const j = await r.json();
+          probeRes.groq = (j.data || []).map((m: any) => m.id);
+        } catch (e: any) { probeRes.groq_err = e.message; }
+      }
+      if (geminiKey) {
+        try {
+          const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${geminiKey}`);
+          const j = await r.json();
+          probeRes.gemini = (j.models || []).map((m: any) => m.name);
+        } catch (e: any) { probeRes.gemini_err = e.message; }
+      }
+      return new Response(JSON.stringify(probeRes), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // ── 1. If text is available (CSV, TXT, or text PDF): Use Groq (sub-second) ──
     if (hasText && groqKey) {
-      const groqModels = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
+      const groqModels = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"];
       for (const gm of groqModels) {
         try {
           const t0 = Date.now();
@@ -315,7 +336,7 @@ Deno.serve(async (req) => {
                 { role: "user", content: `Filename: ${fileName}\n\nStatement Content:\n${textContent.slice(0, 50000)}` },
               ],
             }),
-            signal: AbortSignal.timeout(9000),
+            signal: AbortSignal.timeout(8000),
           });
 
           if (groqRes.ok) {
@@ -330,7 +351,8 @@ Deno.serve(async (req) => {
               }
             }
           } else {
-            errors.push(`Groq ${gm}: ${groqRes.status}`);
+            const errTxt = await groqRes.text().catch(() => "");
+            errors.push(`Groq ${gm}: ${groqRes.status} ${errTxt.slice(0, 100)}`);
           }
         } catch (e: any) {
           errors.push(`Groq ${gm}: ${e.message}`);
@@ -375,7 +397,7 @@ Deno.serve(async (req) => {
                 { role: "user", content: userContent },
               ],
             }),
-            signal: AbortSignal.timeout(10000),
+            signal: AbortSignal.timeout(8000),
           });
 
           if (oaiRes.ok) {
@@ -389,7 +411,8 @@ Deno.serve(async (req) => {
               }
             }
           } else {
-            errors.push(`OpenAI: ${oaiRes.status}`);
+            const errTxt = await oaiRes.text().catch(() => "");
+            errors.push(`OpenAI: ${oaiRes.status} ${errTxt.slice(0, 100)}`);
           }
         }
       } catch (e: any) {
@@ -417,12 +440,17 @@ Deno.serve(async (req) => {
         contents: [{ role: "user", parts }],
         generationConfig: {
           responseMimeType: "application/json",
-          responseSchema: RESPONSE_SCHEMA,
           temperature: 0.1,
         },
       };
 
-      const candidateModels = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite"];
+      const candidateModels = [
+        "gemini-2.5-flash-lite",
+        "gemini-flash-lite-latest",
+        "gemini-2.5-flash",
+        "gemini-3.5-flash-lite",
+        "gemini-flash-latest"
+      ];
       for (const model of candidateModels) {
         try {
           const t0 = Date.now();
@@ -437,7 +465,8 @@ Deno.serve(async (req) => {
           );
 
           if (!aiRes.ok) {
-            errors.push(`${model}: ${aiRes.status}`);
+            const errTxt = await aiRes.text().catch(() => "");
+            errors.push(`${model}: ${aiRes.status} ${errTxt.slice(0, 100)}`);
             continue;
           }
 
@@ -554,6 +583,7 @@ Deno.serve(async (req) => {
       transactions: txns,
       provider: providerUsed,
       durationMs: Date.now() - startTime,
+      errors: errors.length > 0 ? errors : undefined,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (e) {

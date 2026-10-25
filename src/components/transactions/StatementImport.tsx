@@ -671,7 +671,10 @@ function parseCsvClientSide(text: string): Parsed[] {
     const dMatch = line.match(dateRegex);
     if (!dMatch) continue;
 
-    const numMatches = line.match(/(?:INR|Rs\.?|₹)?\s*([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)/g);
+    // Strip date first so year is not matched as an amount
+    const lineWithoutDate = line.replace(dMatch[0], " ");
+
+    const numMatches = lineWithoutDate.match(/(?:INR|Rs\.?|₹)?\s*([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)/g);
     if (!numMatches || numMatches.length === 0) continue;
 
     const nums: number[] = [];
@@ -686,8 +689,7 @@ function parseCsvClientSide(text: string): Parsed[] {
     const isCredit = /\b(cr|credit|deposit|received|inward|refund)\b/i.test(line);
     const type: "income" | "expense" | "transfer" = isCredit ? "income" : "expense";
 
-    let desc = line
-      .replace(dMatch[0], "")
+    let desc = lineWithoutDate
       .replace(/[0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?/g, "")
       .replace(/[,;|\t]/g, " ")
       .replace(/\s+/g, " ")
