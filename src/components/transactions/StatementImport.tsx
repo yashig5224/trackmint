@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  Upload, FileText, X, Check, AlertCircle, Loader2, Sparkles,
+  Upload, FileText, X, Check, CheckCircle2, AlertCircle, Loader2, Sparkles,
   Trash2, History as HistoryIcon, Image as ImageIcon, FileSpreadsheet
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";

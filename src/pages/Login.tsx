@@ -237,13 +237,17 @@ const Login = () => {
         if (error) throw error;
         toast.success("Welcome back");
 
-        // Ensure returning user is marked as onboarded so protected routes never block them
         const { data: u } = await supabase.auth.getUser();
         if (u?.user?.id) {
-          await supabase
+          const { data: p } = await supabase
             .from("profiles")
-            .update({ onboarding_completed: true })
-            .eq("id", u.user.id);
+            .select("onboarding_completed")
+            .eq("id", u.user.id)
+            .maybeSingle();
+          if (!p?.onboarding_completed) {
+            navigate("/onboarding", { replace: true });
+            return;
+          }
         }
         navigate("/app", { replace: true });
         return;

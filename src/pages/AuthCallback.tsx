@@ -57,20 +57,13 @@ export default function AuthCallback() {
 
         console.log("📄 AuthCallback profile resolved:", profile);
 
-        // Returning user or user who has completed onboarding: always route directly to /app
-        const isSignup = type === "signup" || sessionStorage.getItem("trackmint_just_signed_up") === "true";
-        if (profile?.onboarding_completed || !isSignup) {
-          sessionStorage.removeItem("trackmint_just_signed_up");
-          if (!profile?.onboarding_completed) {
-            // Auto-heal returning user so they are never prompted again
-            await supabase.from("profiles").update({ onboarding_completed: true }).eq("id", user.id);
-          }
+        sessionStorage.removeItem("trackmint_just_signed_up");
+        if (profile?.onboarding_completed) {
           navigate("/app", { replace: true });
           return;
         }
 
-        // Genuine brand-new signup who has not completed onboarding
-        sessionStorage.removeItem("trackmint_just_signed_up");
+        // User has not completed onboarding — always send to /onboarding
         navigate("/onboarding", { replace: true });
       } catch (err) {
         console.error("Auth callback error:", err);

@@ -72,23 +72,10 @@ export default function ProtectedRoute({
   }
 
   // ----------------------------------------------------
-  // User needs onboarding (only for genuine new signups)
+  // User needs onboarding (required for all users who haven't completed it)
   // ----------------------------------------------------
-  if (
-    requireOnboarding &&
-    profile.onboarding_completed !== true
-  ) {
-    const justSignedUp = sessionStorage.getItem("trackmint_just_signed_up") === "true";
-    const hasData = (profile.monthly_income && profile.monthly_income > 0) || !!profile.primary_goal;
-
-    // If this is an existing / returning user or has prior data, do not trap them in onboarding
-    if (!justSignedUp || hasData) {
-      console.log("✅ Returning user recognized, skipping onboarding");
-      supabase.from("profiles").update({ onboarding_completed: true }).eq("id", user.id).then(() => {});
-      return <>{children}</>;
-    }
-
-    console.log("➡ Redirecting fresh signup to /onboarding");
+  if (requireOnboarding && profile.onboarding_completed !== true) {
+    console.log("➡ Redirecting user to /onboarding");
     return <Navigate to="/onboarding" replace />;
   }
 
